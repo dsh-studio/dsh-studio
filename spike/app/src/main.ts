@@ -258,8 +258,37 @@ document.getElementById("m-save")!.addEventListener("click", async () => {
   }
 });
 
-document.getElementById("link-deepseek")!.addEventListener("click", () => openUrl("https://platform.deepseek.com"));
-document.getElementById("link-silicon")!.addEventListener("click", () => openUrl("https://cloud.siliconflow.cn"));
+/* 领 key 教程:选供应商即预填表单;链接待换成推荐官邀请码版(TODO) */
+const guide = document.getElementById("guide")!;
+const tabSilicon = document.getElementById("tab-silicon")!;
+const tabDeepseek = document.getElementById("tab-deepseek")!;
+const gSilicon = document.getElementById("g-silicon")!;
+const gDeepseek = document.getElementById("g-deepseek")!;
+
+document.getElementById("toggle-guide")!.addEventListener("click", () => {
+  guide.hidden = !guide.hidden;
+  if (!guide.hidden) pickSilicon();
+});
+function pickSilicon() {
+  tabSilicon.classList.add("active"); tabDeepseek.classList.remove("active");
+  gSilicon.hidden = false; gDeepseek.hidden = true;
+  mKind.value = "openai";
+  if (!mBase.value) mBase.value = "https://api.siliconflow.cn/v1";
+  syncKindUI();
+}
+function pickDeepseek() {
+  tabDeepseek.classList.add("active"); tabSilicon.classList.remove("active");
+  gDeepseek.hidden = false; gSilicon.hidden = true;
+  mKind.value = "deepseek";
+  syncKindUI();
+}
+tabSilicon.addEventListener("click", pickSilicon);
+tabDeepseek.addEventListener("click", pickDeepseek);
+document.getElementById("g-s-open")!.addEventListener("click", () => openUrl("https://cloud.siliconflow.cn"));
+document.getElementById("g-s-keys")!.addEventListener("click", () => openUrl("https://cloud.siliconflow.cn/account/ak"));
+document.getElementById("g-s-models")!.addEventListener("click", () => openUrl("https://cloud.siliconflow.cn/models"));
+document.getElementById("g-d-open")!.addEventListener("click", () => openUrl("https://platform.deepseek.com"));
+document.getElementById("g-d-keys")!.addEventListener("click", () => openUrl("https://platform.deepseek.com/api_keys"));
 
 invoke<ModelConfig | null>("load_model_config").then(applyModelLabel).catch(() => {});
 

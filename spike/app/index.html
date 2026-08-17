@@ -171,6 +171,20 @@
       .m-getkey { font-size: 11.5px; color: var(--muted); margin-top: 10px; }
       .m-getkey a { color: var(--blue); cursor: pointer; text-decoration: none; }
       .m-getkey a:hover { text-decoration: underline; }
+      .guide { margin-top: 10px; border-top: 1px solid var(--line-soft); padding-top: 10px; }
+      .guide[hidden] { display: none; }
+      .g-tabs { display: flex; gap: 6px; margin-bottom: 8px; }
+      .g-tab {
+        font-size: 11.5px; padding: 4px 10px; border-radius: 999px;
+        border: 1px solid var(--line); color: var(--muted);
+      }
+      .g-tab.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+      .g-steps { margin: 0; padding-left: 18px; }
+      .g-steps li { font-size: 11.5px; color: var(--muted); line-height: 1.6; margin-bottom: 7px; }
+      .g-steps li b { color: var(--ink); font-weight: 500; }
+      .g-steps a { color: var(--blue); cursor: pointer; text-decoration: none; white-space: nowrap; }
+      .g-steps a:hover { text-decoration: underline; }
+      .g-note { font-size: 11px; color: var(--green); margin-top: 2px; }
       .modal {
         width: 400px; background: var(--main); border-radius: 16px;
         border: 1px solid var(--line); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
@@ -339,9 +353,25 @@
           <button class="m-btn m-save" id="m-save">保存</button>
         </div>
         <p class="m-getkey">还没有 API Key?
-          <a id="link-deepseek">DeepSeek 开放平台</a> ·
-          <a id="link-silicon">硅基流动(注册送额度)</a>
+          <a id="toggle-guide">查看免费领取教程(新用户 0 元起用)</a>
         </p>
+        <div class="guide" id="guide" hidden>
+          <div class="g-tabs">
+            <button class="g-tab active" id="tab-silicon">硅基流动 · 送2000万tokens</button>
+            <button class="g-tab" id="tab-deepseek">DeepSeek 官方</button>
+          </div>
+          <ol class="g-steps" id="g-silicon">
+            <li><b>注册并实名</b>(手机号即可)。<a id="g-s-open">打开注册页 ↗</a>
+              <div class="g-note">新用户送 2000 万 tokens(约14元),实名后礼包页可再领代金券,够跑数百次任务</div></li>
+            <li><b>建密钥</b>:控制台「API 密钥」→ 新建 → 复制。<a id="g-s-keys">打开密钥页 ↗</a></li>
+            <li><b>回来粘贴</b>:接口地址我已为你填好;模型 ID 去「模型广场」挑一个复制过来。<a id="g-s-models">打开模型广场 ↗</a></li>
+          </ol>
+          <ol class="g-steps" id="g-deepseek" hidden>
+            <li><b>注册</b> DeepSeek 开放平台(手机号)。<a id="g-d-open">打开注册页 ↗</a></li>
+            <li><b>建密钥</b>:「API keys」→ 创建 → 复制。<a id="g-d-keys">打开密钥页 ↗</a></li>
+            <li><b>回来粘贴</b>:接入方式已切为「DeepSeek 官方」,粘贴 Key 保存即可(默认模型 v4-flash,充几元可长期用)。</li>
+          </ol>
+        </div>
         <p class="m-hint">密钥只写入本机应用数据目录,不会上传到任何服务器。</p>
       </div>
     </div>
