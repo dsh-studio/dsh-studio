@@ -1,0 +1,12 @@
+name: spike-win
+on: workflow_dispatch
+jobs:
+  win-runtime:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with: { node-version: 24 }
+      - run: npm install @deepseek-ai/dsh@0.1.0-rc.6
+      - run: npx dsh --version
+      - run: npx dsh --profile headless --dump-default-config | Select-Object -First 40
+        shell: pwsh
