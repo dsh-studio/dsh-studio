@@ -222,9 +222,9 @@
     </style>
   </head>
   <body data-state="idle" id="root">
-    <aside data-tauri-drag-region>
+    <aside>
       <div class="drag-zone" data-tauri-drag-region></div>
-      <div class="side-body" data-tauri-drag-region>
+      <div class="side-body">
         <div class="app-row" data-tauri-drag-region>
           <span class="name" data-tauri-drag-region>DSH Studio</span>
           <button class="v" id="btn-dump" title="诊断(开发者)">spike</button>
@@ -234,7 +234,7 @@
           新建任务
         </button>
         <div class="side-label" data-tauri-drag-region>会话</div>
-        <div class="threads" id="threads" data-tauri-drag-region><div class="threads-empty">还没有会话</div></div>
+        <div class="threads" id="threads"><div class="threads-empty">还没有会话</div></div>
       </div>
       <div class="side-foot" data-tauri-drag-region>
         <span class="avatar" data-tauri-drag-region>A</span>
@@ -249,8 +249,8 @@
         <span class="chip" data-tauri-drag-region><span class="dot" data-tauri-drag-region></span><span id="status-text" data-tauri-drag-region>待命</span></span>
       </div>
 
-      <div class="content" id="content" data-tauri-drag-region>
-        <div class="col hero" id="hero" data-tauri-drag-region>
+      <div class="content" id="content">
+        <div class="col hero" id="hero">
           <svg class="hero-logo" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
             <path d="M10 30c0-8 6-16 14-16s14 8 14 16" /><path d="M10 30h28" /><path d="M17 30v6M31 30v6" />
             <circle cx="24" cy="23" r="2.2" fill="currentColor" stroke="none" />
