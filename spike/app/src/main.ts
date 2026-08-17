@@ -265,18 +265,47 @@ let workDir: string = localStorage.getItem("workdir") ?? "";
 function applyDirLabel() {
   dirLabel.textContent = workDir ? "工作目录:" + (workDir.split("/").pop() || workDir) : "工作目录:主目录";
 }
-document.getElementById("btn-dir")!.addEventListener("click", async () => {
+async function pickWorkDir() {
   const picked = await openDialog({ directory: true, title: "选择 AI 的工作目录", defaultPath: workDir || undefined });
   if (typeof picked === "string" && picked) {
     workDir = picked;
     localStorage.setItem("workdir", workDir);
     applyDirLabel();
   }
-});
+}
+document.getElementById("btn-dir")!.addEventListener("click", pickWorkDir);
 applyDirLabel();
 
-/* ── 设置入口(侧栏齿轮=打开模型设置) ── */
-document.getElementById("btn-settings")!.addEventListener("click", () => modelChip.click());
+/* ── 设置面板 ── */
+const sModal = document.getElementById("s-modal")!;
+const sModelV = document.getElementById("s-model-v")!;
+const sDirV = document.getElementById("s-dir-v")!;
+const sPerm = document.getElementById("s-perm") as HTMLSelectElement;
+
+function refreshSettings() {
+  sModelV.textContent = modelLabel.textContent === "配置模型…" ? "未配置" : modelLabel.textContent;
+  sDirV.textContent = workDir || "主目录";
+  sPerm.value = permSel.value;
+}
+document.getElementById("btn-settings")!.addEventListener("click", () => {
+  refreshSettings();
+  sModal.hidden = false;
+});
+document.getElementById("s-close")!.addEventListener("click", () => { sModal.hidden = true; });
+sModal.addEventListener("click", (e) => { if (e.target === sModal) sModal.hidden = true; });
+document.getElementById("s-model-btn")!.addEventListener("click", () => {
+  sModal.hidden = true;
+  modelChip.click();
+});
+document.getElementById("s-dir-btn")!.addEventListener("click", async () => {
+  await pickWorkDir();
+  refreshSettings();
+});
+sPerm.addEventListener("change", () => { permSel.value = sPerm.value; });
+document.getElementById("s-diag")!.addEventListener("click", () => {
+  sModal.hidden = true;
+  btnDump.click();
+});
 
 /* 领 key 教程:选供应商即预填表单;链接待换成推荐官邀请码版(TODO) */
 const guide = document.getElementById("guide")!;

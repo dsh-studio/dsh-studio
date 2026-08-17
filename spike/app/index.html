@@ -207,6 +207,24 @@
       .m-save { background: var(--ink); color: #fff; font-weight: 500; }
       .m-save:hover { opacity: 0.85; }
       .m-hint { font-size: 11px; color: var(--dim); margin-top: 12px; }
+      .s-row {
+        display: flex; align-items: center; gap: 12px;
+        padding: 13px 0; border-bottom: 1px solid var(--line-soft); font-size: 13px;
+      }
+      .s-row:last-of-type { border-bottom: none; }
+      .s-l { color: var(--ink); font-weight: 500; width: 76px; flex: none; }
+      .s-v { flex: 1; color: var(--muted); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .s-btn {
+        flex: none; font-size: 12.5px; padding: 6px 14px;
+        border: 1px solid var(--line); border-radius: 8px; color: var(--ink);
+        transition: background 0.15s var(--ease);
+      }
+      .s-btn:hover { background: var(--hover); }
+      .s-row select {
+        flex: none; font: inherit; font-size: 12.5px; color: var(--ink);
+        border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px;
+        background: var(--main); outline: none; max-width: 250px;
+      }
       .send {
         flex: none; width: 32px; height: 32px; border-radius: 50%;
         display: grid; place-items: center; background: var(--ink); color: #fff;
@@ -264,7 +282,7 @@
         <span class="avatar" data-tauri-drag-region>A</span>
         <span class="u" data-tauri-drag-region>aisenyc</span>
         <button class="foot-gear" id="btn-settings" title="设置">
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.8v1.7M8 12.5v1.7M1.8 8h1.7M12.5 8h1.7M3.6 3.6l1.2 1.2M11.2 11.2l1.2 1.2M12.4 3.6l-1.2 1.2M4.8 11.2l-1.2 1.2"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
         </button>
       </div>
     </aside>
@@ -342,6 +360,36 @@
         </div>
       </div>
     </section>
+    <div class="modal-bg" id="s-modal" hidden>
+      <div class="modal" style="width: 500px">
+        <h3>设置</h3>
+        <div class="s-row">
+          <span class="s-l">模型</span>
+          <span class="s-v" id="s-model-v">未配置</span>
+          <button class="s-btn" id="s-model-btn">配置</button>
+        </div>
+        <div class="s-row">
+          <span class="s-l">工作目录</span>
+          <span class="s-v" id="s-dir-v">主目录</span>
+          <button class="s-btn" id="s-dir-btn">更换</button>
+        </div>
+        <div class="s-row">
+          <span class="s-l">默认权限</span>
+          <span class="s-v"></span>
+          <select id="s-perm">
+            <option value="read-only">只读(最安全)</option>
+            <option value="workspace-write">工作区可写(批准功能开发中)</option>
+            <option value="danger-full-access">完全放开(不询问)</option>
+          </select>
+        </div>
+        <div class="s-row">
+          <span class="s-l">关于</span>
+          <span class="s-v">DSH Studio spike · dsh 0.1.0-rc.6</span>
+          <button class="s-btn" id="s-diag">运行诊断</button>
+        </div>
+        <div class="m-row"><button class="m-btn m-cancel" id="s-close">关闭</button></div>
+      </div>
+    </div>
     <div class="modal-bg" id="modal" hidden>
       <div class="modal">
         <h3>模型设置</h3>
