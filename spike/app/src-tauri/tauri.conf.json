@@ -13,9 +13,11 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "app",
-        "width": 800,
-        "height": 600
+        "title": "DSH Studio",
+        "width": 920,
+        "height": 640,
+        "minWidth": 640,
+        "minHeight": 440
       }
     ],
     "security": {
