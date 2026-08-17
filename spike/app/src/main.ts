@@ -2,22 +2,23 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
 type RunState = "running" | "done" | "error";
-interface Run { id: number; title: string; lines: { text: string; err: boolean }[]; state: RunState; }
+interface Run { id: number; title: string; lines: { text: string; err: boolean }[]; state: RunState; ts: number; }
 
 const root = document.getElementById("root")!;
 const threadsEl = document.getElementById("threads")!;
 const stageTitle = document.getElementById("stage-title")!;
 const statusText = document.getElementById("status-text")!;
 const elapsedEl = document.getElementById("elapsed")!;
-const idleEl = document.getElementById("idle")!;
+const heroEl = document.getElementById("hero")!;
 const tInner = document.getElementById("t-inner")!;
 const uMsg = document.getElementById("u-msg")!;
 const aOut = document.getElementById("a-out")!;
-const transcript = document.getElementById("transcript")!;
-const taskInput = document.getElementById("task") as HTMLInputElement;
+const content = document.getElementById("content")!;
+const taskInput = document.getElementById("task") as HTMLTextAreaElement;
 const btnRun = document.getElementById("btn-run") as HTMLButtonElement;
 const btnDump = document.getElementById("btn-dump") as HTMLButtonElement;
 const btnNew = document.getElementById("btn-new") as HTMLButtonElement;
+const permSel = document.getElementById("perm") as HTMLSelectElement;
 
 const runs: Run[] = [];
 let current: Run | null = null;
@@ -25,6 +26,14 @@ let viewing: Run | null = null;
 let seq = 0;
 let timer: number | undefined;
 let startedAt = 0;
+
+function ago(ts: number): string {
+  const s = (Date.now() - ts) / 1000;
+  if (s < 60) return "刚刚";
+  if (s < 3600) return Math.floor(s / 60) + "分钟前";
+  if (s < 86400) return Math.floor(s / 3600) + "小时前";
+  return Math.floor(s / 86400) + "天前";
+}
 
 function setChip(state: "idle" | RunState, label: string) {
   root.dataset.state = state;
@@ -40,8 +49,9 @@ function renderThreads() {
   for (const r of [...runs].reverse()) {
     const b = document.createElement("button");
     b.className = "thread-item" + (viewing === r ? " active" : "");
-    b.innerHTML = `<span class="st" data-s="${r.state}"></span><span class="t"></span>`;
+    b.innerHTML = `<span class="st" data-s="${r.state}"></span><span class="t"></span><span class="ago"></span>`;
     (b.querySelector(".t") as HTMLElement).textContent = r.title;
+    (b.querySelector(".ago") as HTMLElement).textContent = ago(r.ts);
     b.addEventListener("click", () => view(r));
     threadsEl.appendChild(b);
   }
@@ -55,12 +65,12 @@ function renderOut(r: Run) {
     el.textContent = l.text + "\n";
     aOut.appendChild(el);
   }
-  transcript.scrollTop = transcript.scrollHeight;
+  content.scrollTop = content.scrollHeight;
 }
 
 function view(r: Run) {
   viewing = r;
-  idleEl.hidden = true;
+  heroEl.hidden = true;
   tInner.hidden = false;
   stageTitle.textContent = r.title;
   uMsg.textContent = r.title;
@@ -71,9 +81,9 @@ function view(r: Run) {
 
 function showIdle() {
   viewing = null;
-  idleEl.hidden = false;
+  heroEl.hidden = false;
   tInner.hidden = true;
-  stageTitle.textContent = "新任务";
+  stageTitle.textContent = "";
   elapsedEl.textContent = "";
   setChip("idle", "待命");
   renderThreads();
@@ -101,12 +111,12 @@ listen<string>("dsh-line", (e) => {
     if (err) el.className = "err";
     el.textContent = line + "\n";
     aOut.appendChild(el);
-    transcript.scrollTop = transcript.scrollHeight;
+    content.scrollTop = content.scrollHeight;
   }
 });
 
 function run(args: string[], title: string) {
-  const r: Run = { id: ++seq, title, lines: [], state: "running" };
+  const r: Run = { id: ++seq, title, lines: [], state: "running", ts: Date.now() };
   runs.push(r);
   current = r;
   view(r);
@@ -117,7 +127,7 @@ function run(args: string[], title: string) {
   timer = window.setInterval(() => {
     elapsedEl.textContent = ((performance.now() - startedAt) / 1000).toFixed(1) + "s";
   }, 100);
-  invoke("run_dsh", { args }).catch((err) => {
+  invoke("run_dsh", { args, mode: permSel.value }).catch((err) => {
     r.lines.push({ text: "invoke error: " + err, err: true });
     if (viewing === r) renderOut(r);
     finish("error");
@@ -137,12 +147,36 @@ btnRun.addEventListener("click", () => {
   const task = taskInput.value.trim();
   if (!task) { taskInput.focus(); return; }
   taskInput.value = "";
+  autosize();
   run(["--profile", "headless", task], task);
 });
-btnDump.addEventListener("click", () => run(["--profile", "headless", "--dump-default-config"], "查看配置树"));
-btnNew.addEventListener("click", showIdle);
-taskInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && root.dataset.state !== "running") btnRun.click();
+btnDump.addEventListener("click", () => {
+  if (root.dataset.state === "running") return;
+  run(["--profile", "headless", "--dump-default-config"], "运行时配置");
 });
+btnNew.addEventListener("click", showIdle);
 
+taskInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey && root.dataset.state !== "running") {
+    e.preventDefault();
+    btnRun.click();
+  }
+});
+function autosize() {
+  taskInput.style.height = "auto";
+  taskInput.style.height = Math.min(taskInput.scrollHeight, 140) + "px";
+}
+taskInput.addEventListener("input", autosize);
+
+for (const card of document.querySelectorAll<HTMLButtonElement>(".card")) {
+  card.addEventListener("click", () => {
+    taskInput.value = card.dataset.fill ?? "";
+    autosize();
+    taskInput.focus();
+    const pos = taskInput.value.indexOf("「」");
+    if (pos >= 0) taskInput.setSelectionRange(pos + 1, pos + 1);
+  });
+}
+
+setInterval(renderThreads, 60_000);
 showIdle();

@@ -6,7 +6,12 @@ use tauri::{AppHandle, Emitter, Manager, State};
 struct RunningChild(Mutex<Option<Child>>);
 
 #[tauri::command]
-fn run_dsh(app: AppHandle, state: State<RunningChild>, args: Vec<String>) -> Result<(), String> {
+fn run_dsh(
+    app: AppHandle,
+    state: State<RunningChild>,
+    args: Vec<String>,
+    mode: Option<String>,
+) -> Result<(), String> {
     if let Some(mut old) = state.0.lock().unwrap().take() {
         let _ = old.kill();
     }
@@ -25,6 +30,10 @@ fn run_dsh(app: AppHandle, state: State<RunningChild>, args: Vec<String>) -> Res
         .arg(&entry)
         .args(&args)
         .env("DSH_HOME", &home)
+        .env(
+            "DSH_PERMISSION_MODE",
+            mode.unwrap_or_else(|| "workspace-write".into()),
+        )
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()

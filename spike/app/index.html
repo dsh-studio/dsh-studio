@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DSH Studio</title>
     <style>
-      /* Codex/ChatGPT 桌面家族语言 · 浅色版:白底、中性灰、结构即质感 */
+      /* 参照 Codex desktop / WorkBuddy 实机截图:浅灰侧栏+白主区+居中欢迎页+大composer */
       :root {
-        --side: #f6f6f7; --main: #ffffff; --raise: #f1f1f2; --hover: #ebebec;
-        --ink: #17171a; --muted: #6e6e76; --dim: #a3a3ab;
-        --line: rgba(20, 20, 25, 0.08); --line-hi: rgba(20, 20, 25, 0.13);
-        --blue: #2563eb; --green: #1a7f37; --red: #c5442e;
+        --side: #f5f5f4; --main: #ffffff; --hover: #ebebea; --active: #e4e4e3;
+        --ink: #1a1a1a; --muted: #6b6b6b; --dim: #a8a8a5;
+        --line: rgba(0, 0, 0, 0.08); --line-soft: rgba(0, 0, 0, 0.05);
+        --blue: #2f6fed; --purple: #8b5cf6; --green: #16a34a; --orange: #ea7317; --red: #d64530;
         --ease: cubic-bezier(0.16, 1, 0.3, 1);
       }
       *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -18,141 +18,170 @@
       body {
         font-family: -apple-system, "PingFang SC", "Segoe UI", sans-serif;
         background: var(--main); color: var(--ink);
-        -webkit-font-smoothing: antialiased; overflow: hidden;
-        display: flex;
+        -webkit-font-smoothing: antialiased; overflow: hidden; display: flex;
       }
-      ::selection { background: rgba(37, 99, 235, 0.15); }
+      ::selection { background: rgba(47, 111, 237, 0.15); }
       button { font: inherit; border: none; background: none; color: inherit; cursor: pointer; }
-      button:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.4); }
+      button:focus-visible, select:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(47, 111, 237, 0.35); }
 
-      /* ── 侧栏 ── */
+      /* ══ 侧栏 ══ */
       aside {
-        width: 236px; flex: none; display: flex; flex-direction: column;
-        background: var(--side); border-right: 1px solid var(--line);
-        padding: 0 10px 12px;
+        width: 240px; flex: none; display: flex; flex-direction: column;
+        background: var(--side); border-right: 1px solid var(--line-soft);
       }
-      .drag-zone { height: 48px; flex: none; }
-      .app-name {
-        display: flex; align-items: center; gap: 8px;
-        padding: 2px 8px 14px; font-size: 13.5px; font-weight: 600;
+      .drag-zone { height: 44px; flex: none; }
+      .side-body { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 0 10px; }
+      .app-row { display: flex; align-items: center; gap: 7px; padding: 0 8px 14px; }
+      .app-row .name { font-size: 14px; font-weight: 700; letter-spacing: -0.01em; }
+      .app-row .v { font-size: 10.5px; color: var(--dim); }
+      .nav-item {
+        display: flex; align-items: center; gap: 10px; width: 100%;
+        padding: 7px 10px; border-radius: 8px; font-size: 13px; color: var(--ink);
+        transition: background 0.15s var(--ease); text-align: left;
       }
-      .app-name svg { width: 17px; height: 17px; color: var(--muted); }
-      .new-task {
-        display: flex; align-items: center; gap: 8px;
-        padding: 8px 10px; border-radius: 8px; font-size: 13px;
-        color: var(--ink); border: 1px solid var(--line-hi); background: var(--main);
-        box-shadow: 0 1px 2px rgba(20, 20, 25, 0.04);
-        transition: background 0.15s var(--ease);
-      }
-      .new-task:hover { background: var(--hover); }
-      .new-task svg { width: 13px; height: 13px; }
-      .side-label { font-size: 11px; font-weight: 500; color: var(--dim); padding: 18px 10px 6px; }
+      .nav-item:hover { background: var(--hover); }
+      .nav-item.active { background: var(--active); font-weight: 500; }
+      .nav-item svg { width: 15px; height: 15px; color: var(--muted); flex: none; }
+      .side-label { font-size: 11px; color: var(--dim); padding: 18px 10px 6px; display: flex; align-items: center; }
       .threads { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 1px; }
       .thread-item {
         display: flex; align-items: center; gap: 8px;
-        padding: 7px 10px; border-radius: 8px; font-size: 13px; color: var(--ink);
+        padding: 6px 10px; border-radius: 8px; font-size: 12.5px; color: var(--ink);
         white-space: nowrap; overflow: hidden; text-align: left;
         transition: background 0.15s var(--ease);
       }
-      .thread-item span.t { flex: 1; overflow: hidden; text-overflow: ellipsis; }
       .thread-item:hover { background: var(--hover); }
-      .thread-item.active { background: #e6e6e9; }
-      .thread-item .st { width: 6px; height: 6px; border-radius: 50%; flex: none; background: var(--dim); }
+      .thread-item.active { background: var(--active); }
+      .thread-item .st { width: 5px; height: 5px; border-radius: 50%; flex: none; background: var(--dim); }
       .thread-item .st[data-s="running"] { background: var(--blue); animation: pulse 1.2s ease-in-out infinite; }
       .thread-item .st[data-s="done"] { background: var(--green); }
       .thread-item .st[data-s="error"] { background: var(--red); }
-      .threads-empty { padding: 7px 10px; font-size: 12.5px; color: var(--dim); }
+      .thread-item .t { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+      .thread-item .ago { flex: none; font-size: 11px; color: var(--dim); }
+      .threads-empty { padding: 6px 10px; font-size: 12px; color: var(--dim); }
       @keyframes pulse { 50% { opacity: 0.3; } }
       .side-foot {
-        flex: none; padding: 12px 10px 2px; border-top: 1px solid var(--line);
-        font-size: 11px; color: var(--dim); font-variant-numeric: tabular-nums;
+        flex: none; display: flex; align-items: center; gap: 9px;
+        padding: 12px 16px; border-top: 1px solid var(--line-soft);
       }
+      .avatar {
+        width: 26px; height: 26px; border-radius: 50%; flex: none;
+        background: #d9d3c7; color: #6b5d42;
+        display: grid; place-items: center; font-size: 12px; font-weight: 600;
+      }
+      .side-foot .u { font-size: 13px; font-weight: 500; }
 
-      /* ── 主区 ── */
-      .stage { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-      .stage-head {
-        flex: none; height: 48px; display: flex; align-items: center; gap: 10px;
-        padding: 0 18px; border-bottom: 1px solid var(--line);
+      /* ══ 主区 ══ */
+      .stage { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; }
+      .stage-top {
+        flex: none; height: 44px; display: flex; align-items: center; gap: 10px; padding: 0 20px;
       }
-      .stage-title { font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .stage-title { font-size: 13px; font-weight: 500; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .elapsed { margin-left: auto; flex: none; font-size: 11.5px; color: var(--dim); font-variant-numeric: tabular-nums; }
       .chip {
-        margin-left: auto; flex: none; display: flex; align-items: center; gap: 6px;
+        flex: none; display: flex; align-items: center; gap: 6px;
         font-size: 11.5px; color: var(--muted);
         padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line);
-        background: var(--side);
       }
       .chip .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--dim); }
-      [data-state="running"] .chip { color: var(--blue); border-color: rgba(37, 99, 235, 0.3); background: rgba(37, 99, 235, 0.05); }
+      [data-state="running"] .chip { color: var(--blue); border-color: rgba(47, 111, 237, 0.3); background: rgba(47, 111, 237, 0.04); }
       [data-state="running"] .chip .dot { background: var(--blue); animation: pulse 1.2s ease-in-out infinite; }
-      [data-state="done"] .chip { color: var(--green); border-color: rgba(26, 127, 55, 0.3); background: rgba(26, 127, 55, 0.05); }
+      [data-state="done"] .chip { color: var(--green); border-color: rgba(22, 163, 74, 0.3); background: rgba(22, 163, 74, 0.04); }
       [data-state="done"] .chip .dot { background: var(--green); }
-      [data-state="error"] .chip { color: var(--red); border-color: rgba(197, 68, 46, 0.3); background: rgba(197, 68, 46, 0.05); }
+      [data-state="error"] .chip { color: var(--red); border-color: rgba(214, 69, 48, 0.3); background: rgba(214, 69, 48, 0.04); }
       [data-state="error"] .chip .dot { background: var(--red); }
-      .elapsed { flex: none; font-size: 11px; color: var(--dim); font-variant-numeric: tabular-nums; }
+      [data-state="idle"] .chip, [data-state="idle"] .elapsed { display: none; }
 
-      .transcript { flex: 1; min-height: 0; overflow-y: auto; }
-      .transcript::-webkit-scrollbar { width: 10px; }
-      .transcript::-webkit-scrollbar-thumb { background: rgba(20, 20, 25, 0.15); border-radius: 5px; border: 3px solid var(--main); }
-      .t-inner { max-width: 760px; margin: 0 auto; padding: 26px 24px 12px; }
+      .content { flex: 1; min-height: 0; overflow-y: auto; }
+      .content::-webkit-scrollbar { width: 10px; }
+      .content::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.14); border-radius: 5px; border: 3px solid var(--main); }
+      .col { max-width: 720px; margin: 0 auto; padding: 0 24px; }
+
+      /* 欢迎页 */
+      .hero { padding-top: 9vh; }
+      .hero-logo { width: 52px; height: 52px; color: var(--dim); margin-bottom: 18px; }
+      .hero h1 { font-size: 34px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.15; }
+      .hero .sub { margin-top: 10px; font-size: 14px; color: var(--muted); }
+      .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 30px; }
+      .card {
+        display: flex; flex-direction: column; align-items: flex-start; gap: 26px;
+        padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--main);
+        font-size: 12.5px; line-height: 1.45; text-align: left; color: var(--ink);
+        transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease), transform 0.15s var(--ease);
+      }
+      .card:hover { border-color: rgba(0, 0, 0, 0.16); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05); transform: translateY(-1px); }
+      .card svg { width: 17px; height: 17px; }
+      .c-blue { color: var(--blue); } .c-purple { color: var(--purple); }
+      .c-green { color: var(--green); } .c-orange { color: var(--orange); }
+
+      /* 运行视图 */
+      .t-inner { padding: 22px 0 12px; }
       .u-msg {
         margin-left: auto; width: fit-content; max-width: 78%;
-        background: var(--raise); border-radius: 16px;
+        background: #f1f1f0; border-radius: 16px;
         padding: 9px 15px; font-size: 13.5px; line-height: 1.55;
         margin-bottom: 20px; word-break: break-word;
       }
       .a-out {
         font-family: ui-monospace, "SF Mono", Menlo, monospace;
         font-size: 11.5px; line-height: 1.7; white-space: pre-wrap; word-break: break-all;
-        color: #45454d; padding-bottom: 8px;
+        color: #4b4b48; padding-bottom: 8px;
       }
       .a-out .err { color: var(--red); }
-      .idle-mark {
-        height: 100%; display: flex; flex-direction: column;
-        align-items: center; justify-content: center; gap: 12px; color: var(--muted);
-      }
-      .idle-mark h2 { font-size: 19px; font-weight: 600; color: var(--ink); letter-spacing: -0.01em; }
-      .idle-mark p { font-size: 13px; }
 
-      /* ── Composer ── */
-      .composer-wrap { flex: none; padding: 10px 24px 18px; }
+      /* ══ Composer ══ */
+      .composer-wrap { flex: none; padding: 8px 24px 6px; }
       .composer {
-        max-width: 760px; margin: 0 auto; display: flex; align-items: center; gap: 6px;
-        background: var(--main); border: 1px solid var(--line-hi); border-radius: 26px;
-        padding: 6px 6px 6px 8px;
-        box-shadow: 0 1px 2px rgba(20, 20, 25, 0.04), 0 4px 16px rgba(20, 20, 25, 0.06);
+        max-width: 720px; margin: 0 auto;
+        background: var(--main); border: 1px solid var(--line); border-radius: 20px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 6px 24px rgba(0, 0, 0, 0.06);
         transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
       }
-      .composer:focus-within {
-        border-color: rgba(20, 20, 25, 0.22);
-        box-shadow: 0 1px 2px rgba(20, 20, 25, 0.04), 0 6px 20px rgba(20, 20, 25, 0.09);
+      .composer:focus-within { border-color: rgba(0, 0, 0, 0.18); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 8px 28px rgba(0, 0, 0, 0.09); }
+      .composer textarea {
+        display: block; width: 100%; border: none; outline: none; background: transparent; resize: none;
+        font: inherit; font-size: 14px; line-height: 1.5; color: var(--ink);
+        padding: 14px 16px 4px; min-height: 52px; max-height: 140px;
       }
+      .composer textarea::placeholder { color: var(--dim); }
+      .c-row { display: flex; align-items: center; gap: 6px; padding: 6px 8px 8px 10px; }
       .c-icon {
-        flex: none; width: 34px; height: 34px; border-radius: 50%;
+        flex: none; width: 30px; height: 30px; border-radius: 50%;
         display: grid; place-items: center; color: var(--muted);
         transition: background 0.15s var(--ease), color 0.15s var(--ease);
       }
-      .c-icon:hover { background: rgba(20, 20, 25, 0.06); color: var(--ink); }
-      .c-icon svg { width: 15px; height: 15px; }
-      .composer input {
-        flex: 1; min-width: 0; border: none; outline: none; background: transparent;
-        font: inherit; font-size: 14px; color: var(--ink); padding: 6px 4px;
+      .c-icon:hover { background: rgba(0, 0, 0, 0.05); color: var(--ink); }
+      .c-icon svg { width: 14px; height: 14px; }
+      .c-icon:disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
+      .model-chip {
+        margin-left: auto; flex: none; display: flex; align-items: center; gap: 5px;
+        font-size: 12px; color: var(--muted); padding: 4px 8px; border-radius: 8px;
       }
-      .composer input::placeholder { color: var(--dim); }
+      .model-chip svg { width: 12px; height: 12px; }
       .send {
-        flex: none; width: 34px; height: 34px; border-radius: 50%;
-        display: grid; place-items: center;
-        background: var(--ink); color: #ffffff;
+        flex: none; width: 32px; height: 32px; border-radius: 50%;
+        display: grid; place-items: center; background: var(--ink); color: #fff;
         transition: opacity 0.15s var(--ease), transform 0.1s var(--ease), background 0.2s var(--ease);
       }
       .send:hover { opacity: 0.85; }
       .send:active { transform: scale(0.94); }
-      .send svg { width: 15px; height: 15px; }
+      .send svg { width: 14px; height: 14px; }
       .send .ic-stop { display: none; }
       [data-state="running"] .send { background: var(--red); }
       [data-state="running"] .send .ic-run { display: none; }
       [data-state="running"] .send .ic-stop { display: block; }
-      .c-icon:disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
-      .hint { max-width: 760px; margin: 8px auto 0; text-align: center; font-size: 11px; color: var(--dim); }
+
+      /* composer 下挂选择条(参照 Codex 的 work chip / WorkBuddy 的工作空间+权限) */
+      .sub-bar {
+        max-width: 720px; margin: 0 auto; display: flex; align-items: center; gap: 16px;
+        padding: 8px 16px 14px; font-size: 12px; color: var(--muted);
+      }
+      .sub-item { display: flex; align-items: center; gap: 6px; }
+      .sub-item svg { width: 13px; height: 13px; }
+      .sub-item select {
+        font: inherit; font-size: 12px; color: var(--muted);
+        border: none; background: transparent; cursor: pointer; outline: none;
+      }
 
       @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
     </style>
@@ -160,49 +189,99 @@
   <body data-state="idle" id="root">
     <aside>
       <div class="drag-zone" data-tauri-drag-region></div>
-      <div class="app-name" data-tauri-drag-region>
-        <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" data-tauri-drag-region>
-          <path d="M10 30c0-8 6-16 14-16s14 8 14 16" /><path d="M10 30h28" />
-        </svg>
-        DSH Studio
+      <div class="side-body">
+        <div class="app-row" data-tauri-drag-region>
+          <span class="name" data-tauri-drag-region>DSH Studio</span>
+          <span class="v" data-tauri-drag-region>spike</span>
+        </div>
+        <button class="nav-item active" id="btn-new">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M11.3 2.7a1.6 1.6 0 0 1 2.3 2.3L6 12.6l-3 .7.7-3z"/></svg>
+          新建任务
+        </button>
+        <button class="nav-item" id="btn-dump">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5.5 2.5c-1.5 0-2 .8-2 2v2c0 1-.6 1.5-1.5 1.5.9 0 1.5.5 1.5 1.5v2c0 1.2.5 2 2 2M10.5 2.5c1.5 0 2 .8 2 2v2c0 1 .6 1.5 1.5 1.5-.9 0-1.5.5-1.5 1.5v2c0 1.2-.5 2-2 2"/></svg>
+          运行时配置
+        </button>
+        <div class="side-label">会话</div>
+        <div class="threads" id="threads"><div class="threads-empty">还没有会话</div></div>
       </div>
-      <button class="new-task" id="btn-new">
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg>
-        新任务
-      </button>
-      <div class="side-label">会话</div>
-      <div class="threads" id="threads"><div class="threads-empty">还没有会话</div></div>
-      <div class="side-foot">dsh 0.1.0-rc.6 · runtime 已捆绑</div>
+      <div class="side-foot">
+        <span class="avatar">A</span>
+        <span class="u">aisenyc</span>
+      </div>
     </aside>
 
     <section class="stage">
-      <div class="stage-head" data-tauri-drag-region>
-        <span class="stage-title" id="stage-title" data-tauri-drag-region>新任务</span>
+      <div class="stage-top" data-tauri-drag-region>
+        <span class="stage-title" id="stage-title" data-tauri-drag-region></span>
         <span class="elapsed" id="elapsed" data-tauri-drag-region></span>
-        <span class="chip" data-tauri-drag-region><span class="dot" data-tauri-drag-region></span><span id="status-text" data-tauri-drag-region>待命</span></span>
+        <span class="chip" data-tauri-drag-region><span class="dot"></span><span id="status-text">待命</span></span>
       </div>
-      <div class="transcript" id="transcript">
-        <div class="idle-mark" id="idle">
-          <h2>想让它做什么?</h2>
-          <p>描述一个任务,dsh 会在本机沙箱里动手执行</p>
+
+      <div class="content" id="content">
+        <div class="col hero" id="hero">
+          <svg class="hero-logo" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+            <path d="M10 30c0-8 6-16 14-16s14 8 14 16" /><path d="M10 30h28" /><path d="M17 30v6M31 30v6" />
+            <circle cx="24" cy="23" r="2.2" fill="currentColor" stroke="none" />
+          </svg>
+          <h1>想让它做什么?</h1>
+          <p class="sub">描述一个任务,你的桌面数字同事会在本机动手完成</p>
+          <div class="cards">
+            <button class="card" data-fill="帮我整理 ~/Downloads 文件夹:先扫描给出分类方案,不要直接动文件">
+              <svg class="c-blue" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4.5c0-.8.7-1.5 1.5-1.5h2.6l1.4 1.5h5A1.5 1.5 0 0 1 14 6v5.5c0 .8-.7 1.5-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5z"/></svg>
+              整理一个乱糟糟的文件夹
+            </button>
+            <button class="card" data-fill="调研「」这个主题,输出一份带小标题的中文报告,存为 report.md">
+              <svg class="c-purple" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2.5h6L13 5.5v8a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-10a1 1 0 0 1 1-1z"/><path d="M5.5 8h5M5.5 10.5h5"/></svg>
+              写一份调研报告
+            </button>
+            <button class="card" data-fill="读取「」这个 CSV 文件,统计每列的分布,给出摘要表格">
+              <svg class="c-green" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 2.5h11v11h-11z"/><path d="M2.5 6.5h11M6.5 2.5v11"/></svg>
+              处理一张数据表
+            </button>
+            <button class="card" data-fill="检查一下这台电脑当前的磁盘占用,找出最大的 10 个目录">
+              <svg class="c-orange" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="5.5"/><path d="M8 5v3.2l2.2 1.3"/></svg>
+              查查电脑哪里占空间
+            </button>
+          </div>
         </div>
-        <div class="t-inner" id="t-inner" hidden>
+        <div class="col t-inner" id="t-inner" hidden>
           <div class="u-msg" id="u-msg"></div>
           <div class="a-out" id="a-out"></div>
         </div>
       </div>
+
       <div class="composer-wrap">
         <div class="composer">
-          <button class="c-icon" id="btn-dump" title="查看配置树">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5.5 2.5c-1.5 0-2 .8-2 2v2c0 1-.6 1.5-1.5 1.5.9 0 1.5.5 1.5 1.5v2c0 1.2.5 2 2 2M10.5 2.5c1.5 0 2 .8 2 2v2c0 1 .6 1.5 1.5 1.5-.9 0-1.5.5-1.5 1.5v2c0 1.2-.5 2-2 2"/></svg>
-          </button>
-          <input id="task" type="text" placeholder="描述任务,例如:列出当前目录下最大的 5 个文件" />
-          <button class="send" id="btn-run" title="运行(⏎) / 运行中点击停止">
-            <svg class="ic-run" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5"/></svg>
-            <svg class="ic-stop" viewBox="0 0 16 16" fill="currentColor"><rect x="4" y="4" width="8" height="8" rx="1.5"/></svg>
-          </button>
+          <textarea id="task" rows="1" placeholder="今天帮你做些什么?"></textarea>
+          <div class="c-row">
+            <button class="c-icon" title="附件(即将推出)" disabled>
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg>
+            </button>
+            <span class="model-chip">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8.8 1.8 3.5 9h3.7l-1 5.2L11.5 7H7.8z"/></svg>
+              V4-Flash · 默认
+            </span>
+            <button class="send" id="btn-run" title="运行(⏎) / 运行中点击停止">
+              <svg class="ic-run" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5"/></svg>
+              <svg class="ic-stop" viewBox="0 0 16 16" fill="currentColor"><rect x="4" y="4" width="8" height="8" rx="1.5"/></svg>
+            </button>
+          </div>
         </div>
-        <div class="hint">spike 构建 · headless profile · 运行中可点红色按钮停止</div>
+        <div class="sub-bar">
+          <span class="sub-item">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4.5c0-.8.7-1.5 1.5-1.5h2.6l1.4 1.5h5A1.5 1.5 0 0 1 14 6v5.5c0 .8-.7 1.5-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5z"/></svg>
+            工作目录:home
+          </span>
+          <span class="sub-item">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1.8 13 4v4c0 3.2-2.1 5.3-5 6.2C5.1 13.3 3 11.2 3 8V4z"/></svg>
+            <select id="perm">
+              <option value="read-only">权限:只读</option>
+              <option value="workspace-write" selected>权限:工作区可写(操作需批准)</option>
+              <option value="danger-full-access">权限:完全放开(不询问)</option>
+            </select>
+          </span>
+        </div>
       </div>
     </section>
     <script type="module" src="/src/main.ts"></script>
