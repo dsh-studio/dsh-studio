@@ -5,7 +5,8 @@
 ## 数字
 
 - runtime 体积（未压缩）：node **191MB** + dsh node_modules（531 包）**343MB** = **534MB**
-- .app 总体积：**544MB**（arm64，ad-hoc 签名）
+- .app 总体积：初版 **544MB** → **node 裁剪后 467MB**（2026-08-17 用户拍板：node 裁到只剩 bin/node，删 include/lib/share 与 npm/npx/corepack，省 77MB；依赖树暂不裁，node-pty 多平台产物等 ~150MB 裁剪空间留 W5）
+- .app 内 smoke（裁剪后复验）：`--version` → `0.1.0-rc.6` ✅
 - 构建耗时：**141s 全程**（其中 Rust release 编译 130s；资源拷贝+codesign 仅 **~11s**——担心的万文件签名卡死未发生）
 - 冷启动到窗口可交互：（待人工点按记录）
 
