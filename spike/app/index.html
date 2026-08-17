@@ -217,13 +217,14 @@
         border: none; background: transparent; cursor: pointer; outline: none;
       }
 
+      .app-name svg, .hero-logo { pointer-events: none; }
       @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
     </style>
   </head>
   <body data-state="idle" id="root">
-    <aside>
+    <aside data-tauri-drag-region>
       <div class="drag-zone" data-tauri-drag-region></div>
-      <div class="side-body">
+      <div class="side-body" data-tauri-drag-region>
         <div class="app-row" data-tauri-drag-region>
           <span class="name" data-tauri-drag-region>DSH Studio</span>
           <button class="v" id="btn-dump" title="诊断(开发者)">spike</button>
@@ -232,12 +233,12 @@
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M11.3 2.7a1.6 1.6 0 0 1 2.3 2.3L6 12.6l-3 .7.7-3z"/></svg>
           新建任务
         </button>
-        <div class="side-label">会话</div>
-        <div class="threads" id="threads"><div class="threads-empty">还没有会话</div></div>
+        <div class="side-label" data-tauri-drag-region>会话</div>
+        <div class="threads" id="threads" data-tauri-drag-region><div class="threads-empty">还没有会话</div></div>
       </div>
-      <div class="side-foot">
-        <span class="avatar">A</span>
-        <span class="u">aisenyc</span>
+      <div class="side-foot" data-tauri-drag-region>
+        <span class="avatar" data-tauri-drag-region>A</span>
+        <span class="u" data-tauri-drag-region>aisenyc</span>
       </div>
     </aside>
 
@@ -245,17 +246,17 @@
       <div class="stage-top" data-tauri-drag-region>
         <span class="stage-title" id="stage-title" data-tauri-drag-region></span>
         <span class="elapsed" id="elapsed" data-tauri-drag-region></span>
-        <span class="chip" data-tauri-drag-region><span class="dot"></span><span id="status-text">待命</span></span>
+        <span class="chip" data-tauri-drag-region><span class="dot" data-tauri-drag-region></span><span id="status-text" data-tauri-drag-region>待命</span></span>
       </div>
 
-      <div class="content" id="content">
-        <div class="col hero" id="hero">
+      <div class="content" id="content" data-tauri-drag-region>
+        <div class="col hero" id="hero" data-tauri-drag-region>
           <svg class="hero-logo" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
             <path d="M10 30c0-8 6-16 14-16s14 8 14 16" /><path d="M10 30h28" /><path d="M17 30v6M31 30v6" />
             <circle cx="24" cy="23" r="2.2" fill="currentColor" stroke="none" />
           </svg>
-          <h1>想让它做什么?</h1>
-          <p class="sub">描述一个任务,你的桌面数字同事会在本机动手完成</p>
+          <h1 data-tauri-drag-region>想让它做什么?</h1>
+          <p class="sub" data-tauri-drag-region>描述一个任务,你的桌面数字同事会在本机动手完成</p>
           <div class="cards">
             <button class="card" data-fill="帮我整理 ~/Downloads 文件夹:先扫描给出分类方案,不要直接动文件">
               <svg class="c-blue" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4.5c0-.8.7-1.5 1.5-1.5h2.6l1.4 1.5h5A1.5 1.5 0 0 1 14 6v5.5c0 .8-.7 1.5-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5z"/></svg>

@@ -101,6 +101,24 @@ function finish(state: RunState, label?: string) {
   renderThreads();
 }
 
+/* 输出按帧批量渲染:大量流式行不逐行刷 DOM,避免主线程卡死拖拽/滚动 */
+let pendingLines: { text: string; err: boolean }[] = [];
+let flushScheduled = false;
+function flushLines() {
+  flushScheduled = false;
+  if (!pendingLines.length) return;
+  const frag = document.createDocumentFragment();
+  for (const l of pendingLines) {
+    const el = document.createElement("span");
+    if (l.err) el.className = "err";
+    el.textContent = l.text + "\n";
+    frag.appendChild(el);
+  }
+  pendingLines = [];
+  aOut.appendChild(frag);
+  content.scrollTop = content.scrollHeight;
+}
+
 listen<string>("dsh-line", (e) => {
   if (!current) return;
   const line = e.payload;
@@ -108,11 +126,11 @@ listen<string>("dsh-line", (e) => {
   const err = line.startsWith("[err]");
   current.lines.push({ text: line, err });
   if (viewing === current) {
-    const el = document.createElement("span");
-    if (err) el.className = "err";
-    el.textContent = line + "\n";
-    aOut.appendChild(el);
-    content.scrollTop = content.scrollHeight;
+    pendingLines.push({ text: line, err });
+    if (!flushScheduled) {
+      flushScheduled = true;
+      requestAnimationFrame(flushLines);
+    }
   }
 });
 
