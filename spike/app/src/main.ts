@@ -4,13 +4,16 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 
 type RunState = "running" | "done" | "error";
-interface Run { id: number; title: string; lines: { text: string; err: boolean }[]; state: RunState; ts: number; }
+interface Run {
+  id: number; title: string;
+  lines: { text: string; err: boolean }[];
+  state: RunState; ts: number;
+  kind: "task" | "diag";
+}
 
 const root = document.getElementById("root")!;
 const threadsEl = document.getElementById("threads")!;
 const stageTitle = document.getElementById("stage-title")!;
-const statusText = document.getElementById("status-text")!;
-const elapsedEl = document.getElementById("elapsed")!;
 const heroEl = document.getElementById("hero")!;
 const tInner = document.getElementById("t-inner")!;
 const uMsg = document.getElementById("u-msg")!;
@@ -26,8 +29,6 @@ const runs: Run[] = [];
 let current: Run | null = null;
 let viewing: Run | null = null;
 let seq = 0;
-let timer: number | undefined;
-let startedAt = 0;
 
 function ago(ts: number): string {
   const s = (Date.now() - ts) / 1000;
@@ -37,9 +38,8 @@ function ago(ts: number): string {
   return Math.floor(s / 86400) + "天前";
 }
 
-function setChip(state: "idle" | RunState, label: string) {
+function setState(state: "idle" | RunState) {
   root.dataset.state = state;
-  statusText.textContent = label;
 }
 
 function renderThreads() {
@@ -59,14 +59,83 @@ function renderThreads() {
   }
 }
 
+/* ── 输出渲染:diag=等宽原文;task=正文排版 + <think> 折叠抽屉 ── */
 function renderOut(r: Run) {
+  aOut.className = r.kind === "diag" ? "a-out mono" : "a-out prose";
   aOut.textContent = "";
-  for (const l of r.lines) {
-    const el = document.createElement("span");
-    if (l.err) el.className = "err";
-    el.textContent = l.text + "\n";
-    aOut.appendChild(el);
+  const frag = document.createDocumentFragment();
+
+  if (r.kind === "diag") {
+    for (const l of r.lines) {
+      const el = document.createElement("span");
+      if (l.err) el.className = "err";
+      el.textContent = l.text + "\n";
+      frag.appendChild(el);
+    }
+  } else {
+    let normal = "";
+    let think = "";
+    let inThink = false;
+    const flushNormal = () => {
+      const t = normal.replace(/^\n+/, "");
+      if (t.trim()) {
+        const d = document.createElement("span");
+        d.textContent = t;
+        frag.appendChild(d);
+      }
+      normal = "";
+    };
+    const flushThink = (open: boolean) => {
+      if (think.trim()) {
+        const det = document.createElement("details");
+        det.className = "think";
+        det.open = open;
+        const sum = document.createElement("summary");
+        sum.textContent = "思考过程";
+        det.appendChild(sum);
+        const div = document.createElement("div");
+        div.textContent = think.trim();
+        det.appendChild(div);
+        frag.appendChild(det);
+      }
+      think = "";
+    };
+    for (const l of r.lines) {
+      if (l.err) {
+        flushNormal();
+        const e = document.createElement("div");
+        e.className = "err";
+        e.textContent = l.text.replace(/^\[err\]\s?/, "");
+        frag.appendChild(e);
+        continue;
+      }
+      let text = l.text + "\n";
+      while (text.length) {
+        if (!inThink) {
+          const m = text.match(/<think(?:ing)?>/i);
+          if (!m || m.index === undefined) { normal += text; text = ""; }
+          else {
+            normal += text.slice(0, m.index);
+            flushNormal();
+            inThink = true;
+            text = text.slice(m.index + m[0].length);
+          }
+        } else {
+          const m = text.match(/<\/think(?:ing)?>/i);
+          if (!m || m.index === undefined) { think += text; text = ""; }
+          else {
+            think += text.slice(0, m.index);
+            flushThink(false);
+            inThink = false;
+            text = text.slice(m.index + m[0].length);
+          }
+        }
+      }
+    }
+    if (inThink) flushThink(true);
+    flushNormal();
   }
+  aOut.appendChild(frag);
   content.scrollTop = content.scrollHeight;
 }
 
@@ -76,7 +145,7 @@ function view(r: Run) {
   tInner.hidden = false;
   stageTitle.textContent = r.title;
   uMsg.textContent = r.title;
-  setChip(r.state, r.state === "running" ? "运行中" : r.state === "done" ? "完成" : "失败");
+  setState(r.state);
   renderOut(r);
   renderThreads();
 }
@@ -86,67 +155,46 @@ function showIdle() {
   heroEl.hidden = false;
   tInner.hidden = true;
   stageTitle.textContent = "";
-  elapsedEl.textContent = "";
-  setChip("idle", "待命");
+  setState("idle");
   renderThreads();
   taskInput.focus();
 }
 
-function finish(state: RunState, label?: string) {
+function finish(state: RunState) {
   if (!current) return;
   current.state = state;
-  if (viewing === current) setChip(state, label ?? (state === "done" ? "完成" : "失败"));
-  if (timer !== undefined) { clearInterval(timer); timer = undefined; }
+  if (viewing === current) setState(state);
   btnDump.disabled = false;
   current = null;
   renderThreads();
 }
 
-/* 输出按帧批量渲染:大量流式行不逐行刷 DOM,避免主线程卡死拖拽/滚动 */
-let pendingLines: { text: string; err: boolean }[] = [];
+/* 流式:行进 run.lines,按帧整体重渲(答案体量小,重渲比增量简单可靠) */
 let flushScheduled = false;
-function flushLines() {
-  flushScheduled = false;
-  if (!pendingLines.length) return;
-  const frag = document.createDocumentFragment();
-  for (const l of pendingLines) {
-    const el = document.createElement("span");
-    if (l.err) el.className = "err";
-    el.textContent = l.text + "\n";
-    frag.appendChild(el);
-  }
-  pendingLines = [];
-  aOut.appendChild(frag);
-  content.scrollTop = content.scrollHeight;
+function scheduleRender() {
+  if (flushScheduled) return;
+  flushScheduled = true;
+  requestAnimationFrame(() => {
+    flushScheduled = false;
+    if (viewing) renderOut(viewing);
+  });
 }
 
 listen<string>("dsh-line", (e) => {
   if (!current) return;
   const line = e.payload;
   if (line === "[exit]") { finish("done"); return; }
-  const err = line.startsWith("[err]");
-  current.lines.push({ text: line, err });
-  if (viewing === current) {
-    pendingLines.push({ text: line, err });
-    if (!flushScheduled) {
-      flushScheduled = true;
-      requestAnimationFrame(flushLines);
-    }
-  }
+  current.lines.push({ text: line, err: line.startsWith("[err]") });
+  if (viewing === current) scheduleRender();
 });
 
-function run(args: string[], title: string) {
-  const r: Run = { id: ++seq, title, lines: [], state: "running", ts: Date.now() };
+function run(args: string[], title: string, kind: "task" | "diag" = "task") {
+  const r: Run = { id: ++seq, title, lines: [], state: "running", ts: Date.now(), kind };
   runs.push(r);
   current = r;
   view(r);
-  setChip("running", "运行中");
+  setState("running");
   btnDump.disabled = true;
-  startedAt = performance.now();
-  elapsedEl.textContent = "0.0s";
-  timer = window.setInterval(() => {
-    elapsedEl.textContent = ((performance.now() - startedAt) / 1000).toFixed(1) + "s";
-  }, 100);
   invoke("run_dsh", { args, mode: permSel.value, cwd: workDir }).catch((err) => {
     r.lines.push({ text: "invoke error: " + err, err: true });
     if (viewing === r) renderOut(r);
@@ -161,18 +209,18 @@ btnRun.addEventListener("click", () => {
       current.lines.push({ text: "—— 已被用户停止 ——", err: true });
       if (viewing === current) renderOut(current);
     }
-    finish("error", "已停止");
+    finish("error");
     return;
   }
   const task = taskInput.value.trim();
   if (!task) { taskInput.focus(); return; }
   taskInput.value = "";
   autosize();
-  run(["--profile", "headless", task], task);
+  run(["--profile", "headless", task], task, "task");
 });
 btnDump.addEventListener("click", () => {
   if (root.dataset.state === "running") return;
-  run(["--profile", "headless", "--dump-default-config"], "运行时配置");
+  run(["--profile", "headless", "--dump-default-config"], "运行诊断", "diag");
 });
 btnNew.addEventListener("click", showIdle);
 

@@ -122,12 +122,31 @@
         padding: 9px 15px; font-size: 13.5px; line-height: 1.55;
         margin-bottom: 20px; word-break: break-word;
       }
-      .a-out {
+      .a-out { padding-bottom: 8px; }
+      .a-out.prose {
+        font-size: 13.5px; line-height: 1.8; color: var(--ink);
+        white-space: pre-wrap; word-break: normal; overflow-wrap: anywhere;
+      }
+      .a-out.mono {
         font-family: ui-monospace, "SF Mono", Menlo, monospace;
         font-size: 11.5px; line-height: 1.7; white-space: pre-wrap; word-break: break-all;
-        color: #4b4b48; padding-bottom: 8px;
+        color: #4b4b48;
       }
-      .a-out .err { color: var(--red); }
+      .a-out .err { color: var(--red); font-size: 12px; }
+      .think {
+        margin: 4px 0 14px; border: 1px solid var(--line-soft); border-radius: 10px;
+        background: var(--side);
+      }
+      .think summary {
+        font-size: 12px; color: var(--muted); padding: 8px 13px;
+        cursor: pointer; user-select: none; list-style: none;
+      }
+      .think summary::before { content: "▸ "; }
+      .think[open] summary::before { content: "▾ "; }
+      .think > div {
+        padding: 0 13px 10px; font-size: 12px; color: var(--muted);
+        line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere;
+      }
 
       /* ══ Composer ══ */
       .composer-wrap { flex: none; padding: 8px 24px 6px; }
@@ -290,8 +309,6 @@
     <section class="stage">
       <div class="stage-top" data-tauri-drag-region>
         <span class="stage-title" id="stage-title" data-tauri-drag-region></span>
-        <span class="elapsed" id="elapsed" data-tauri-drag-region></span>
-        <span class="chip" data-tauri-drag-region><span class="dot" data-tauri-drag-region></span><span id="status-text" data-tauri-drag-region>待命</span></span>
       </div>
 
       <div class="content" id="content">
