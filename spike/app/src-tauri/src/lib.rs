@@ -107,6 +107,7 @@ fn run_dsh(
     state: State<RunningChild>,
     args: Vec<String>,
     mode: Option<String>,
+    cwd: Option<String>,
 ) -> Result<(), String> {
     if let Some(mut old) = state.0.lock().unwrap().take() {
         let _ = old.kill();
@@ -117,9 +118,14 @@ fn run_dsh(
     // 入口已核实:package.json bin = {"dsh": "lib/bin.js"}
     let entry = dsh.join("lib/bin.js");
     let home = dsh_home(&app)?;
+    // 工作目录=dsh 的沙箱工作区(sandbox-policy workspaceRoot 取 cwd);默认用户主目录
+    let workdir = cwd
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| std::env::var("HOME").unwrap_or_else(|_| "/".into()));
     let mut child = Command::new(&node)
         .arg(&entry)
         .args(&args)
+        .current_dir(&workdir)
         .env("DSH_HOME", &home)
         .env(
             "DSH_PERMISSION_MODE",
@@ -165,6 +171,7 @@ fn stop_dsh(state: State<RunningChild>) -> Result<(), String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(RunningChild(Mutex::new(None)))
         .invoke_handler(tauri::generate_handler![
             run_dsh,

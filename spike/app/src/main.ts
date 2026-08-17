@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { open as openDialog } from "@tauri-apps/plugin-dialog";
 
 type RunState = "running" | "done" | "error";
 interface Run { id: number; title: string; lines: { text: string; err: boolean }[]; state: RunState; ts: number; }
@@ -146,7 +147,7 @@ function run(args: string[], title: string) {
   timer = window.setInterval(() => {
     elapsedEl.textContent = ((performance.now() - startedAt) / 1000).toFixed(1) + "s";
   }, 100);
-  invoke("run_dsh", { args, mode: permSel.value }).catch((err) => {
+  invoke("run_dsh", { args, mode: permSel.value, cwd: workDir }).catch((err) => {
     r.lines.push({ text: "invoke error: " + err, err: true });
     if (viewing === r) renderOut(r);
     finish("error");
@@ -257,6 +258,25 @@ document.getElementById("m-save")!.addEventListener("click", async () => {
     alert("保存失败: " + e);
   }
 });
+
+/* ── 工作目录选择(= dsh 沙箱工作区) ── */
+const dirLabel = document.getElementById("dir-label")!;
+let workDir: string = localStorage.getItem("workdir") ?? "";
+function applyDirLabel() {
+  dirLabel.textContent = workDir ? "工作目录:" + (workDir.split("/").pop() || workDir) : "工作目录:主目录";
+}
+document.getElementById("btn-dir")!.addEventListener("click", async () => {
+  const picked = await openDialog({ directory: true, title: "选择 AI 的工作目录", defaultPath: workDir || undefined });
+  if (typeof picked === "string" && picked) {
+    workDir = picked;
+    localStorage.setItem("workdir", workDir);
+    applyDirLabel();
+  }
+});
+applyDirLabel();
+
+/* ── 设置入口(侧栏齿轮=打开模型设置) ── */
+document.getElementById("btn-settings")!.addEventListener("click", () => modelChip.click());
 
 /* 领 key 教程:选供应商即预填表单;链接待换成推荐官邀请码版(TODO) */
 const guide = document.getElementById("guide")!;

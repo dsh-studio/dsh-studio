@@ -231,6 +231,15 @@
         font: inherit; font-size: 12px; color: var(--muted);
         border: none; background: transparent; cursor: pointer; outline: none;
       }
+      .sub-btn { border-radius: 6px; padding: 3px 6px; transition: background 0.15s var(--ease), color 0.15s var(--ease); }
+      .sub-btn:hover { background: rgba(0, 0, 0, 0.05); color: var(--ink); }
+      .foot-gear {
+        margin-left: auto; width: 28px; height: 28px; border-radius: 7px;
+        display: grid; place-items: center; color: var(--muted);
+        transition: background 0.15s var(--ease), color 0.15s var(--ease);
+      }
+      .foot-gear:hover { background: var(--hover); color: var(--ink); }
+      .foot-gear svg { width: 15px; height: 15px; }
 
       .app-name svg, .hero-logo { pointer-events: none; }
       @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
@@ -254,6 +263,9 @@
       <div class="side-foot" data-tauri-drag-region>
         <span class="avatar" data-tauri-drag-region>A</span>
         <span class="u" data-tauri-drag-region>aisenyc</span>
+        <button class="foot-gear" id="btn-settings" title="设置">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.8v1.7M8 12.5v1.7M1.8 8h1.7M12.5 8h1.7M3.6 3.6l1.2 1.2M11.2 11.2l1.2 1.2M12.4 3.6l-1.2 1.2M4.8 11.2l-1.2 1.2"/></svg>
+        </button>
       </div>
     </aside>
 
@@ -315,16 +327,16 @@
           </div>
         </div>
         <div class="sub-bar">
-          <span class="sub-item">
+          <button class="sub-item sub-btn" id="btn-dir" title="选择 AI 的工作目录(可读写范围)">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4.5c0-.8.7-1.5 1.5-1.5h2.6l1.4 1.5h5A1.5 1.5 0 0 1 14 6v5.5c0 .8-.7 1.5-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5z"/></svg>
-            工作目录:home
-          </span>
+            <span id="dir-label">工作目录:主目录</span>
+          </button>
           <span class="sub-item">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1.8 13 4v4c0 3.2-2.1 5.3-5 6.2C5.1 13.3 3 11.2 3 8V4z"/></svg>
             <select id="perm">
-              <option value="read-only">权限:只读</option>
-              <option value="workspace-write" selected>权限:工作区可写(操作需批准)</option>
-              <option value="danger-full-access">权限:完全放开(不询问)</option>
+              <option value="read-only" selected>权限:只读(最安全)</option>
+              <option value="workspace-write">权限:工作区可写(改动会等待批准·批准功能开发中)</option>
+              <option value="danger-full-access">权限:完全放开(不询问,自担风险)</option>
             </select>
           </span>
         </div>
