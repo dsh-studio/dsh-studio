@@ -167,6 +167,10 @@
         position: fixed; inset: 0; z-index: 50;
         background: rgba(0, 0, 0, 0.28); display: grid; place-items: center;
       }
+      .modal-bg[hidden] { display: none; }
+      .m-getkey { font-size: 11.5px; color: var(--muted); margin-top: 10px; }
+      .m-getkey a { color: var(--blue); cursor: pointer; text-decoration: none; }
+      .m-getkey a:hover { text-decoration: underline; }
       .modal {
         width: 400px; background: var(--main); border-radius: 16px;
         border: 1px solid var(--line); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
@@ -333,6 +337,10 @@
           <button class="m-btn m-cancel" id="m-cancel">取消</button>
           <button class="m-btn m-save" id="m-save">保存</button>
         </div>
+        <p class="m-getkey">还没有 API Key?
+          <a id="link-deepseek">DeepSeek 开放平台</a> ·
+          <a id="link-silicon">硅基流动(注册送额度)</a>
+        </p>
         <p class="m-hint">密钥只写入本机应用数据目录,不会上传到任何服务器。</p>
       </div>
     </div>

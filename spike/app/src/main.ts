@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { openUrl } from "@tauri-apps/plugin-opener";
 
 type RunState = "running" | "done" | "error";
 interface Run { id: number; title: string; lines: { text: string; err: boolean }[]; state: RunState; ts: number; }
@@ -238,6 +239,9 @@ document.getElementById("m-save")!.addEventListener("click", async () => {
     alert("保存失败: " + e);
   }
 });
+
+document.getElementById("link-deepseek")!.addEventListener("click", () => openUrl("https://platform.deepseek.com"));
+document.getElementById("link-silicon")!.addEventListener("click", () => openUrl("https://cloud.siliconflow.cn"));
 
 invoke<ModelConfig | null>("load_model_config").then(applyModelLabel).catch(() => {});
 
