@@ -59,21 +59,25 @@ fn save_model_config(
         std::fs::write(home.join(".env"), env_line).map_err(|e| e.to_string())?;
     }
 
+    // DSH Studio 人设:替换 dsh 默认的 "coding agent" persona(order-0 部署段,纯配置可换)
+    const PERSONA: &str = "你是 DSH Studio 的桌面数字同事,由 {{model}} 驱动,当前工作目录是 {{cwd}}。你替用户在这台电脑上完成实际工作:整理文件、撰写文档、调研信息、处理数据、运行命令。始终用简体中文回复。回答先给结果和结论,再给必要的过程说明。涉及修改或删除文件时,先说明打算做什么再动手。任务完成后用一两句话汇报结果。";
+    let persona_patch = format!("- id: system-prompt\n  config:\n    persona: \"{PERSONA}\"\n");
+
     // 生成 pi-ai 路由 patch(DeepSeek 官方走内置路由,只需改默认模型)
     let patch = match kind.as_str() {
         "deepseek" => {
             if model.is_empty() {
-                "[]\n".to_string()
+                persona_patch
             } else {
                 format!(
-                    "- id: agent-default-model\n  config:\n    provider: deepseek-official\n    model: {model}\n"
+                    "{persona_patch}- id: agent-default-model\n  config:\n    provider: deepseek-official\n    model: {model}\n"
                 )
             }
         }
         _ => {
             let api = if kind == "anthropic" { "anthropic-messages" } else { "openai-completions" };
             format!(
-                "- id: llm-pi-ai\n  config:\n    providers:\n      studio:\n        displayName: 我的模型\n        apiKeyEnv: STUDIO_API_KEY\n        api: {api}\n        baseURL: {base_url}\n        models:\n          - id: {model}\n            contextWindow: 131072\n            maxTokens: 8192\n- id: agent-default-model\n  config:\n    provider: studio\n    model: {model}\n"
+                "{persona_patch}- id: llm-pi-ai\n  config:\n    providers:\n      studio:\n        displayName: 我的模型\n        apiKeyEnv: STUDIO_API_KEY\n        api: {api}\n        baseURL: {base_url}\n        models:\n          - id: {model}\n            contextWindow: 131072\n            maxTokens: 8192\n- id: agent-default-model\n  config:\n    provider: studio\n    model: {model}\n"
             )
         }
     };
