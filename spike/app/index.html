@@ -155,9 +155,39 @@
       .c-icon:disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
       .model-chip {
         margin-left: auto; flex: none; display: flex; align-items: center; gap: 5px;
-        font-size: 12px; color: var(--muted); padding: 4px 8px; border-radius: 8px;
+        font-size: 12px; color: var(--muted); padding: 4px 10px; border-radius: 8px;
+        transition: background 0.15s var(--ease), color 0.15s var(--ease);
       }
+      .model-chip:hover { background: rgba(0, 0, 0, 0.05); color: var(--ink); }
+      .model-chip.unset { color: var(--orange); }
       .model-chip svg { width: 12px; height: 12px; }
+
+      /* ── 模型设置弹窗 ── */
+      .modal-bg {
+        position: fixed; inset: 0; z-index: 50;
+        background: rgba(0, 0, 0, 0.28); display: grid; place-items: center;
+      }
+      .modal {
+        width: 400px; background: var(--main); border-radius: 16px;
+        border: 1px solid var(--line); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+        padding: 22px 22px 18px;
+      }
+      .modal h3 { font-size: 15px; font-weight: 700; margin-bottom: 16px; }
+      .modal label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+      .modal input, .modal select {
+        display: block; width: 100%; margin-top: 5px;
+        font: inherit; font-size: 13px; color: var(--ink);
+        border: 1px solid var(--line); border-radius: 8px;
+        padding: 8px 10px; outline: none; background: var(--main);
+      }
+      .modal input:focus, .modal select:focus { border-color: rgba(47, 111, 237, 0.5); }
+      .m-row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+      .m-btn { font-size: 13px; padding: 7px 16px; border-radius: 8px; }
+      .m-cancel { color: var(--muted); }
+      .m-cancel:hover { background: var(--hover); }
+      .m-save { background: var(--ink); color: #fff; font-weight: 500; }
+      .m-save:hover { opacity: 0.85; }
+      .m-hint { font-size: 11px; color: var(--dim); margin-top: 12px; }
       .send {
         flex: none; width: 32px; height: 32px; border-radius: 50%;
         display: grid; place-items: center; background: var(--ink); color: #fff;
@@ -254,10 +284,10 @@
             <button class="c-icon" title="附件(即将推出)" disabled>
               <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg>
             </button>
-            <span class="model-chip">
+            <button class="model-chip unset" id="model-chip" title="模型设置">
               <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8.8 1.8 3.5 9h3.7l-1 5.2L11.5 7H7.8z"/></svg>
-              V4-Flash · 默认
-            </span>
+              <span id="model-label">配置模型…</span>
+            </button>
             <button class="send" id="btn-run" title="运行(⏎) / 运行中点击停止">
               <svg class="ic-run" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5"/></svg>
               <svg class="ic-stop" viewBox="0 0 16 16" fill="currentColor"><rect x="4" y="4" width="8" height="8" rx="1.5"/></svg>
@@ -280,6 +310,32 @@
         </div>
       </div>
     </section>
+    <div class="modal-bg" id="modal" hidden>
+      <div class="modal">
+        <h3>模型设置</h3>
+        <label>接入方式
+          <select id="m-kind">
+            <option value="openai">OpenAI 兼容(大多数国产模型/网关)</option>
+            <option value="anthropic">Anthropic 兼容(Claude 协议,如 MiniMax)</option>
+            <option value="deepseek">DeepSeek 官方</option>
+          </select>
+        </label>
+        <label id="m-base-row">接口地址 Base URL
+          <input id="m-base" placeholder="https://api.example.com/v1" />
+        </label>
+        <label>API Key
+          <input id="m-key" type="password" placeholder="sk-…(已保存过可留空)" />
+        </label>
+        <label>模型 ID
+          <input id="m-model" placeholder="例如 MiniMax-M2.5 / deepseek-v4-flash" />
+        </label>
+        <div class="m-row">
+          <button class="m-btn m-cancel" id="m-cancel">取消</button>
+          <button class="m-btn m-save" id="m-save">保存</button>
+        </div>
+        <p class="m-hint">密钥只写入本机应用数据目录,不会上传到任何服务器。</p>
+      </div>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

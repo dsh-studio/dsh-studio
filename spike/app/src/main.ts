@@ -178,5 +178,68 @@ for (const card of document.querySelectorAll<HTMLButtonElement>(".card")) {
   });
 }
 
+/* ── 模型设置 ── */
+const modal = document.getElementById("modal")!;
+const modelChip = document.getElementById("model-chip") as HTMLButtonElement;
+const modelLabel = document.getElementById("model-label")!;
+const mKind = document.getElementById("m-kind") as HTMLSelectElement;
+const mBaseRow = document.getElementById("m-base-row")!;
+const mBase = document.getElementById("m-base") as HTMLInputElement;
+const mKey = document.getElementById("m-key") as HTMLInputElement;
+const mModel = document.getElementById("m-model") as HTMLInputElement;
+
+interface ModelConfig { kind: string; base_url: string; model: string; api_key_set: boolean; }
+
+function applyModelLabel(cfg: ModelConfig | null) {
+  if (cfg && cfg.model) {
+    modelLabel.textContent = cfg.model;
+    modelChip.classList.remove("unset");
+  } else if (cfg && cfg.kind === "deepseek") {
+    modelLabel.textContent = "deepseek-v4-flash";
+    modelChip.classList.remove("unset");
+  } else {
+    modelLabel.textContent = "配置模型…";
+    modelChip.classList.add("unset");
+  }
+}
+
+function syncKindUI() {
+  mBaseRow.style.display = mKind.value === "deepseek" ? "none" : "block";
+}
+mKind.addEventListener("change", syncKindUI);
+
+modelChip.addEventListener("click", async () => {
+  const cfg = await invoke<ModelConfig | null>("load_model_config").catch(() => null);
+  if (cfg) {
+    mKind.value = cfg.kind;
+    mBase.value = cfg.base_url;
+    mModel.value = cfg.model;
+    mKey.value = "";
+    mKey.placeholder = cfg.api_key_set ? "已保存,留空则不变" : "sk-…";
+  }
+  syncKindUI();
+  modal.hidden = false;
+  (mKind.value === "deepseek" ? mKey : mBase).focus();
+});
+document.getElementById("m-cancel")!.addEventListener("click", () => { modal.hidden = true; });
+modal.addEventListener("click", (e) => { if (e.target === modal) modal.hidden = true; });
+
+document.getElementById("m-save")!.addEventListener("click", async () => {
+  const kind = mKind.value;
+  const baseUrl = mBase.value.trim();
+  const model = mModel.value.trim();
+  const apiKey = mKey.value.trim();
+  if (kind !== "deepseek" && (!baseUrl || !model)) { alert("接口地址和模型 ID 必填"); return; }
+  try {
+    await invoke("save_model_config", { kind, baseUrl, model, apiKey });
+    applyModelLabel({ kind, base_url: baseUrl, model, api_key_set: true });
+    modal.hidden = true;
+  } catch (e) {
+    alert("保存失败: " + e);
+  }
+});
+
+invoke<ModelConfig | null>("load_model_config").then(applyModelLabel).catch(() => {});
+
 setInterval(renderThreads, 60_000);
 showIdle();

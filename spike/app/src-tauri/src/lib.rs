@@ -1,9 +1,105 @@
 use std::io::{BufRead, BufReader};
+use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager, State};
 
 struct RunningChild(Mutex<Option<Child>>);
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Default)]
+struct ModelConfig {
+    kind: String,
+    base_url: String,
+    model: String,
+    #[serde(default)]
+    api_key_set: bool,
+}
+
+fn dsh_home(app: &AppHandle) -> Result<PathBuf, String> {
+    let home = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| e.to_string())?
+        .join("dsh-home");
+    std::fs::create_dir_all(&home).map_err(|e| e.to_string())?;
+    Ok(home)
+}
+
+const HEADLESS_PROFILE_PKG: &str = r#"{
+  "name": "dsh-profile-headless",
+  "private": true,
+  "dependencies": {},
+  "dsh": { "profile": { "bundles": ["@deepseek-ai/dsh-base", "@deepseek-ai/dsh-headless"] } }
+}
+"#;
+
+#[tauri::command]
+fn save_model_config(
+    app: AppHandle,
+    kind: String,
+    base_url: String,
+    model: String,
+    api_key: String,
+) -> Result<(), String> {
+    let home = dsh_home(&app)?;
+    let profile = home.join("profiles/headless");
+    std::fs::create_dir_all(&profile).map_err(|e| e.to_string())?;
+    let pkg = profile.join("package.json");
+    if !pkg.exists() {
+        std::fs::write(&pkg, HEADLESS_PROFILE_PKG).map_err(|e| e.to_string())?;
+    }
+
+    // 密钥写 $DSH_HOME/.env(仅本机);留空则保留现有密钥
+    if !api_key.is_empty() {
+        let env_line = if kind == "deepseek" {
+            format!("DEEPSEEK_API_KEY={api_key}\n")
+        } else {
+            format!("STUDIO_API_KEY={api_key}\n")
+        };
+        std::fs::write(home.join(".env"), env_line).map_err(|e| e.to_string())?;
+    }
+
+    // 生成 pi-ai 路由 patch(DeepSeek 官方走内置路由,只需改默认模型)
+    let patch = match kind.as_str() {
+        "deepseek" => {
+            if model.is_empty() {
+                "[]\n".to_string()
+            } else {
+                format!(
+                    "- id: agent-default-model\n  config:\n    provider: deepseek-official\n    model: {model}\n"
+                )
+            }
+        }
+        _ => {
+            let api = if kind == "anthropic" { "anthropic-messages" } else { "openai-completions" };
+            format!(
+                "- id: llm-pi-ai\n  config:\n    providers:\n      studio:\n        displayName: 我的模型\n        apiKeyEnv: STUDIO_API_KEY\n        api: {api}\n        baseURL: {base_url}\n        models:\n          - id: {model}\n            contextWindow: 131072\n            maxTokens: 8192\n- id: agent-default-model\n  config:\n    provider: studio\n    model: {model}\n"
+            )
+        }
+    };
+    std::fs::write(profile.join("cordis.patch.yml"), patch).map_err(|e| e.to_string())?;
+
+    let cfg = ModelConfig { kind, base_url, model, api_key_set: true };
+    std::fs::write(
+        home.join("studio-model.json"),
+        serde_json::to_string(&cfg).map_err(|e| e.to_string())?,
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+fn load_model_config(app: AppHandle) -> Result<Option<ModelConfig>, String> {
+    let home = dsh_home(&app)?;
+    let p = home.join("studio-model.json");
+    if !p.exists() {
+        return Ok(None);
+    }
+    let raw = std::fs::read_to_string(&p).map_err(|e| e.to_string())?;
+    let mut cfg: ModelConfig = serde_json::from_str(&raw).map_err(|e| e.to_string())?;
+    cfg.api_key_set = home.join(".env").exists();
+    Ok(Some(cfg))
+}
 
 #[tauri::command]
 fn run_dsh(
@@ -18,14 +114,9 @@ fn run_dsh(
     let res = app.path().resource_dir().map_err(|e| e.to_string())?;
     let node = res.join("runtime/node/bin/node");
     let dsh = res.join("runtime/app/node_modules/@deepseek-ai/dsh");
-    // 入口已核实：package.json bin = {"dsh": "lib/bin.js"}
+    // 入口已核实:package.json bin = {"dsh": "lib/bin.js"}
     let entry = dsh.join("lib/bin.js");
-    let home = app
-        .path()
-        .app_data_dir()
-        .map_err(|e| e.to_string())?
-        .join("dsh-home");
-    std::fs::create_dir_all(&home).map_err(|e| e.to_string())?;
+    let home = dsh_home(&app)?;
     let mut child = Command::new(&node)
         .arg(&entry)
         .args(&args)
@@ -52,7 +143,7 @@ fn run_dsh(
         for line in BufReader::new(stdout).lines().map_while(Result::ok) {
             let _ = app3.emit("dsh-line", line);
         }
-        // stdout EOF：进程退出或被停止,清理句柄避免僵尸
+        // stdout EOF:进程退出或被停止,清理句柄避免僵尸
         if let Some(mut c) = app3.state::<RunningChild>().0.lock().unwrap().take() {
             let _ = c.wait();
         }
@@ -74,7 +165,12 @@ fn stop_dsh(state: State<RunningChild>) -> Result<(), String> {
 pub fn run() {
     tauri::Builder::default()
         .manage(RunningChild(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![run_dsh, stop_dsh])
+        .invoke_handler(tauri::generate_handler![
+            run_dsh,
+            stop_dsh,
+            save_model_config,
+            load_model_config
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
