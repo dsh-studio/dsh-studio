@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DSH Studio</title>
     <style>
-      /* Codex/ChatGPT 桌面家族语言:中性灰黑、无装饰、结构即质感 */
+      /* Codex/ChatGPT 桌面家族语言 · 浅色版:白底、中性灰、结构即质感 */
       :root {
-        --side: #171717; --main: #212121; --raise: #2f2f2f; --hover: #262626;
-        --ink: #ececec; --muted: #9b9b9b; --dim: #6e6e6e;
-        --line: rgba(255, 255, 255, 0.08); --line-hi: rgba(255, 255, 255, 0.14);
-        --blue: #66aaff; --green: #6fcf7c; --red: #f28b7d;
+        --side: #f6f6f7; --main: #ffffff; --raise: #f1f1f2; --hover: #ebebec;
+        --ink: #17171a; --muted: #6e6e76; --dim: #a3a3ab;
+        --line: rgba(20, 20, 25, 0.08); --line-hi: rgba(20, 20, 25, 0.13);
+        --blue: #2563eb; --green: #1a7f37; --red: #c5442e;
         --ease: cubic-bezier(0.16, 1, 0.3, 1);
       }
       *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -21,9 +21,9 @@
         -webkit-font-smoothing: antialiased; overflow: hidden;
         display: flex;
       }
-      ::selection { background: rgba(102, 170, 255, 0.25); }
+      ::selection { background: rgba(37, 99, 235, 0.15); }
       button { font: inherit; border: none; background: none; color: inherit; cursor: pointer; }
-      button:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(102, 170, 255, 0.5); }
+      button:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.4); }
 
       /* ── 侧栏 ── */
       aside {
@@ -40,15 +40,13 @@
       .new-task {
         display: flex; align-items: center; gap: 8px;
         padding: 8px 10px; border-radius: 8px; font-size: 13px;
-        color: var(--ink); border: 1px solid var(--line-hi);
+        color: var(--ink); border: 1px solid var(--line-hi); background: var(--main);
+        box-shadow: 0 1px 2px rgba(20, 20, 25, 0.04);
         transition: background 0.15s var(--ease);
       }
       .new-task:hover { background: var(--hover); }
       .new-task svg { width: 13px; height: 13px; }
-      .side-label {
-        font-size: 11px; font-weight: 500; color: var(--dim);
-        padding: 18px 10px 6px;
-      }
+      .side-label { font-size: 11px; font-weight: 500; color: var(--dim); padding: 18px 10px 6px; }
       .threads { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 1px; }
       .thread-item {
         display: flex; align-items: center; gap: 8px;
@@ -58,7 +56,7 @@
       }
       .thread-item span.t { flex: 1; overflow: hidden; text-overflow: ellipsis; }
       .thread-item:hover { background: var(--hover); }
-      .thread-item.active { background: var(--raise); }
+      .thread-item.active { background: #e6e6e9; }
       .thread-item .st { width: 6px; height: 6px; border-radius: 50%; flex: none; background: var(--dim); }
       .thread-item .st[data-s="running"] { background: var(--blue); animation: pulse 1.2s ease-in-out infinite; }
       .thread-item .st[data-s="done"] { background: var(--green); }
@@ -67,8 +65,7 @@
       @keyframes pulse { 50% { opacity: 0.3; } }
       .side-foot {
         flex: none; padding: 12px 10px 2px; border-top: 1px solid var(--line);
-        font-size: 11px; color: var(--dim);
-        font-variant-numeric: tabular-nums;
+        font-size: 11px; color: var(--dim); font-variant-numeric: tabular-nums;
       }
 
       /* ── 主区 ── */
@@ -82,19 +79,20 @@
         margin-left: auto; flex: none; display: flex; align-items: center; gap: 6px;
         font-size: 11.5px; color: var(--muted);
         padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line);
+        background: var(--side);
       }
       .chip .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--dim); }
-      [data-state="running"] .chip { color: var(--blue); border-color: rgba(102, 170, 255, 0.35); }
+      [data-state="running"] .chip { color: var(--blue); border-color: rgba(37, 99, 235, 0.3); background: rgba(37, 99, 235, 0.05); }
       [data-state="running"] .chip .dot { background: var(--blue); animation: pulse 1.2s ease-in-out infinite; }
-      [data-state="done"] .chip { color: var(--green); border-color: rgba(111, 207, 124, 0.3); }
+      [data-state="done"] .chip { color: var(--green); border-color: rgba(26, 127, 55, 0.3); background: rgba(26, 127, 55, 0.05); }
       [data-state="done"] .chip .dot { background: var(--green); }
-      [data-state="error"] .chip { color: var(--red); border-color: rgba(242, 139, 125, 0.35); }
+      [data-state="error"] .chip { color: var(--red); border-color: rgba(197, 68, 46, 0.3); background: rgba(197, 68, 46, 0.05); }
       [data-state="error"] .chip .dot { background: var(--red); }
       .elapsed { flex: none; font-size: 11px; color: var(--dim); font-variant-numeric: tabular-nums; }
 
       .transcript { flex: 1; min-height: 0; overflow-y: auto; }
       .transcript::-webkit-scrollbar { width: 10px; }
-      .transcript::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 5px; border: 3px solid var(--main); }
+      .transcript::-webkit-scrollbar-thumb { background: rgba(20, 20, 25, 0.15); border-radius: 5px; border: 3px solid var(--main); }
       .t-inner { max-width: 760px; margin: 0 auto; padding: 26px 24px 12px; }
       .u-msg {
         margin-left: auto; width: fit-content; max-width: 78%;
@@ -105,12 +103,12 @@
       .a-out {
         font-family: ui-monospace, "SF Mono", Menlo, monospace;
         font-size: 11.5px; line-height: 1.7; white-space: pre-wrap; word-break: break-all;
-        color: #cfcfcf; padding-bottom: 8px;
+        color: #45454d; padding-bottom: 8px;
       }
       .a-out .err { color: var(--red); }
       .idle-mark {
         height: 100%; display: flex; flex-direction: column;
-        align-items: center; justify-content: center; gap: 12px; color: var(--dim);
+        align-items: center; justify-content: center; gap: 12px; color: var(--muted);
       }
       .idle-mark h2 { font-size: 19px; font-weight: 600; color: var(--ink); letter-spacing: -0.01em; }
       .idle-mark p { font-size: 13px; }
@@ -119,17 +117,21 @@
       .composer-wrap { flex: none; padding: 10px 24px 18px; }
       .composer {
         max-width: 760px; margin: 0 auto; display: flex; align-items: center; gap: 6px;
-        background: var(--raise); border: 1px solid var(--line-hi); border-radius: 26px;
+        background: var(--main); border: 1px solid var(--line-hi); border-radius: 26px;
         padding: 6px 6px 6px 8px;
-        transition: border-color 0.2s var(--ease);
+        box-shadow: 0 1px 2px rgba(20, 20, 25, 0.04), 0 4px 16px rgba(20, 20, 25, 0.06);
+        transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
       }
-      .composer:focus-within { border-color: rgba(255, 255, 255, 0.24); }
+      .composer:focus-within {
+        border-color: rgba(20, 20, 25, 0.22);
+        box-shadow: 0 1px 2px rgba(20, 20, 25, 0.04), 0 6px 20px rgba(20, 20, 25, 0.09);
+      }
       .c-icon {
         flex: none; width: 34px; height: 34px; border-radius: 50%;
         display: grid; place-items: center; color: var(--muted);
         transition: background 0.15s var(--ease), color 0.15s var(--ease);
       }
-      .c-icon:hover { background: rgba(255, 255, 255, 0.08); color: var(--ink); }
+      .c-icon:hover { background: rgba(20, 20, 25, 0.06); color: var(--ink); }
       .c-icon svg { width: 15px; height: 15px; }
       .composer input {
         flex: 1; min-width: 0; border: none; outline: none; background: transparent;
@@ -139,17 +141,18 @@
       .send {
         flex: none; width: 34px; height: 34px; border-radius: 50%;
         display: grid; place-items: center;
-        background: var(--ink); color: #171717;
-        transition: opacity 0.15s var(--ease), transform 0.1s var(--ease);
+        background: var(--ink); color: #ffffff;
+        transition: opacity 0.15s var(--ease), transform 0.1s var(--ease), background 0.2s var(--ease);
       }
       .send:hover { opacity: 0.85; }
       .send:active { transform: scale(0.94); }
-      .send:disabled, .c-icon:disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
       .send svg { width: 15px; height: 15px; }
-      .hint {
-        max-width: 760px; margin: 8px auto 0; text-align: center;
-        font-size: 11px; color: var(--dim);
-      }
+      .send .ic-stop { display: none; }
+      [data-state="running"] .send { background: var(--red); }
+      [data-state="running"] .send .ic-run { display: none; }
+      [data-state="running"] .send .ic-stop { display: block; }
+      .c-icon:disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
+      .hint { max-width: 760px; margin: 8px auto 0; text-align: center; font-size: 11px; color: var(--dim); }
 
       @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
     </style>
@@ -157,8 +160,8 @@
   <body data-state="idle" id="root">
     <aside>
       <div class="drag-zone" data-tauri-drag-region></div>
-      <div class="app-name">
-        <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+      <div class="app-name" data-tauri-drag-region>
+        <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" data-tauri-drag-region>
           <path d="M10 30c0-8 6-16 14-16s14 8 14 16" /><path d="M10 30h28" />
         </svg>
         DSH Studio
@@ -174,9 +177,9 @@
 
     <section class="stage">
       <div class="stage-head" data-tauri-drag-region>
-        <span class="stage-title" id="stage-title">新任务</span>
-        <span class="elapsed" id="elapsed"></span>
-        <span class="chip"><span class="dot"></span><span id="status-text">待命</span></span>
+        <span class="stage-title" id="stage-title" data-tauri-drag-region>新任务</span>
+        <span class="elapsed" id="elapsed" data-tauri-drag-region></span>
+        <span class="chip" data-tauri-drag-region><span class="dot" data-tauri-drag-region></span><span id="status-text" data-tauri-drag-region>待命</span></span>
       </div>
       <div class="transcript" id="transcript">
         <div class="idle-mark" id="idle">
@@ -194,11 +197,12 @@
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5.5 2.5c-1.5 0-2 .8-2 2v2c0 1-.6 1.5-1.5 1.5.9 0 1.5.5 1.5 1.5v2c0 1.2.5 2 2 2M10.5 2.5c1.5 0 2 .8 2 2v2c0 1 .6 1.5 1.5 1.5-.9 0-1.5.5-1.5 1.5v2c0 1.2-.5 2-2 2"/></svg>
           </button>
           <input id="task" type="text" placeholder="描述任务,例如:列出当前目录下最大的 5 个文件" />
-          <button class="send" id="btn-run" title="运行(⏎)">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5"/></svg>
+          <button class="send" id="btn-run" title="运行(⏎) / 运行中点击停止">
+            <svg class="ic-run" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5"/></svg>
+            <svg class="ic-stop" viewBox="0 0 16 16" fill="currentColor"><rect x="4" y="4" width="8" height="8" rx="1.5"/></svg>
           </button>
         </div>
-        <div class="hint">spike 构建 · headless profile · 输出为原始日志</div>
+        <div class="hint">spike 构建 · headless profile · 运行中可点红色按钮停止</div>
       </div>
     </section>
     <script type="module" src="/src/main.ts"></script>

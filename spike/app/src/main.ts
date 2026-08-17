@@ -80,12 +80,11 @@ function showIdle() {
   taskInput.focus();
 }
 
-function finish(state: RunState) {
+function finish(state: RunState, label?: string) {
   if (!current) return;
   current.state = state;
-  if (viewing === current) setChip(state, state === "done" ? "完成" : "失败");
+  if (viewing === current) setChip(state, label ?? (state === "done" ? "完成" : "失败"));
   if (timer !== undefined) { clearInterval(timer); timer = undefined; }
-  btnRun.disabled = false;
   btnDump.disabled = false;
   current = null;
   renderThreads();
@@ -112,7 +111,6 @@ function run(args: string[], title: string) {
   current = r;
   view(r);
   setChip("running", "运行中");
-  btnRun.disabled = true;
   btnDump.disabled = true;
   startedAt = performance.now();
   elapsedEl.textContent = "0.0s";
@@ -127,6 +125,15 @@ function run(args: string[], title: string) {
 }
 
 btnRun.addEventListener("click", () => {
+  if (root.dataset.state === "running") {
+    invoke("stop_dsh").catch(() => {});
+    if (current) {
+      current.lines.push({ text: "—— 已被用户停止 ——", err: true });
+      if (viewing === current) renderOut(current);
+    }
+    finish("error", "已停止");
+    return;
+  }
   const task = taskInput.value.trim();
   if (!task) { taskInput.focus(); return; }
   taskInput.value = "";
@@ -135,7 +142,7 @@ btnRun.addEventListener("click", () => {
 btnDump.addEventListener("click", () => run(["--profile", "headless", "--dump-default-config"], "查看配置树"));
 btnNew.addEventListener("click", showIdle);
 taskInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && !btnRun.disabled) btnRun.click();
+  if (e.key === "Enter" && root.dataset.state !== "running") btnRun.click();
 });
 
 showIdle();
