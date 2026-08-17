@@ -125,8 +125,26 @@
       .a-out { padding-bottom: 8px; }
       .a-out.prose {
         font-size: 13.5px; line-height: 1.8; color: var(--ink);
-        white-space: pre-wrap; word-break: normal; overflow-wrap: anywhere;
+        word-break: normal; overflow-wrap: anywhere;
       }
+      .a-out.prose .md-p { margin: 0 0 10px; }
+      .a-out.prose ul, .a-out.prose ol { margin: 4px 0 12px; padding-left: 22px; }
+      .a-out.prose li { margin-bottom: 5px; }
+      .a-out.prose strong { font-weight: 600; }
+      .a-out.prose code {
+        font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px;
+        background: var(--side); border: 1px solid var(--line-soft);
+        border-radius: 5px; padding: 1px 5px;
+      }
+      .a-out.prose .md-pre {
+        font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11.5px;
+        line-height: 1.6; background: var(--side); border: 1px solid var(--line-soft);
+        border-radius: 10px; padding: 12px 14px; margin: 6px 0 12px;
+        overflow-x: auto; white-space: pre;
+      }
+      .a-out.prose .md-pre code { background: none; border: none; padding: 0; }
+      .a-out.prose .md-h { font-weight: 700; margin: 14px 0 8px; }
+      .md-h1 { font-size: 17px; } .md-h2 { font-size: 15.5px; } .md-h3 { font-size: 14px; }
       .a-out.mono {
         font-family: ui-monospace, "SF Mono", Menlo, monospace;
         font-size: 11.5px; line-height: 1.7; white-space: pre-wrap; word-break: break-all;

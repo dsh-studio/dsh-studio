@@ -59,6 +59,81 @@ function renderThreads() {
   }
 }
 
+/* ── 安全 Markdown 渲染(纯 DOM 构建,textContent 赋值,无 innerHTML 注入面) ── */
+function inline(text: string): Node[] {
+  const nodes: Node[] = [];
+  for (const part of text.split(/(`[^`]+`)/)) {
+    if (/^`[^`]+`$/.test(part)) {
+      const c = document.createElement("code");
+      c.textContent = part.slice(1, -1);
+      nodes.push(c);
+    } else {
+      for (const b of part.split(/(\*\*[^*]+\*\*)/)) {
+        if (/^\*\*[^*]+\*\*$/.test(b)) {
+          const s = document.createElement("strong");
+          s.textContent = b.slice(2, -2);
+          nodes.push(s);
+        } else if (b) nodes.push(document.createTextNode(b));
+      }
+    }
+  }
+  return nodes;
+}
+
+function renderMarkdown(text: string): DocumentFragment {
+  const frag = document.createDocumentFragment();
+  let list: HTMLElement | null = null;
+  let listType = "";
+  let code: string[] | null = null;
+  const closeList = () => { if (list) { frag.appendChild(list); list = null; listType = ""; } };
+  for (const line of text.split("\n")) {
+    if (code) {
+      if (/^\s*```/.test(line)) {
+        const pre = document.createElement("pre");
+        pre.className = "md-pre";
+        pre.textContent = code.join("\n");
+        frag.appendChild(pre);
+        code = null;
+      } else code.push(line);
+      continue;
+    }
+    if (/^\s*```/.test(line)) { closeList(); code = []; continue; }
+    const h = line.match(/^(#{1,3})\s+(.*)/);
+    if (h) {
+      closeList();
+      const el = document.createElement("div");
+      el.className = "md-h md-h" + h[1].length;
+      el.append(...inline(h[2]));
+      frag.appendChild(el);
+      continue;
+    }
+    const ul = line.match(/^\s*[-*]\s+(.*)/);
+    const ol = ul ? null : line.match(/^\s*\d+[.、)]\s+(.*)/);
+    if (ul || ol) {
+      const type = ul ? "ul" : "ol";
+      if (!list || listType !== type) { closeList(); list = document.createElement(type); listType = type; }
+      const li = document.createElement("li");
+      li.append(...inline((ul ?? ol)![1]));
+      list.appendChild(li);
+      continue;
+    }
+    if (!line.trim()) { closeList(); continue; }
+    closeList();
+    const p = document.createElement("p");
+    p.className = "md-p";
+    p.append(...inline(line));
+    frag.appendChild(p);
+  }
+  closeList();
+  if (code) {
+    const pre = document.createElement("pre");
+    pre.className = "md-pre";
+    pre.textContent = code.join("\n");
+    frag.appendChild(pre);
+  }
+  return frag;
+}
+
 /* ── 输出渲染:diag=等宽原文;task=正文排版 + <think> 折叠抽屉 ── */
 function renderOut(r: Run) {
   aOut.className = r.kind === "diag" ? "a-out mono" : "a-out prose";
@@ -78,11 +153,7 @@ function renderOut(r: Run) {
     let inThink = false;
     const flushNormal = () => {
       const t = normal.replace(/^\n+/, "");
-      if (t.trim()) {
-        const d = document.createElement("span");
-        d.textContent = t;
-        frag.appendChild(d);
-      }
+      if (t.trim()) frag.appendChild(renderMarkdown(t));
       normal = "";
     };
     const flushThink = (open: boolean) => {
