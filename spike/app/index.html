@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DSH Studio Spike</title>
+    <style>
+      body { font-family: -apple-system, sans-serif; margin: 16px; background: #1a1a1a; color: #e8e8e8; }
+      button { padding: 8px 16px; margin-right: 8px; cursor: pointer; }
+      #out { margin-top: 12px; padding: 12px; background: #0d0d0d; border-radius: 6px;
+             height: 70vh; overflow: auto; font-size: 12px; white-space: pre-wrap; }
+    </style>
+  </head>
+  <body>
+    <h3>DSH Studio — sidecar spike</h3>
+    <button id="btn-dump">运行 --dump-default-config（无需 key）</button>
+    <button id="btn-task">跑任务（需 key）</button>
+    <pre id="out"></pre>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
