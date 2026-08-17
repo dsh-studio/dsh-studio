@@ -14,10 +14,12 @@
     "windows": [
       {
         "title": "DSH Studio",
-        "width": 920,
-        "height": 640,
-        "minWidth": 640,
-        "minHeight": 440
+        "width": 960,
+        "height": 660,
+        "minWidth": 700,
+        "minHeight": 480,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true
       }
     ],
     "security": {
