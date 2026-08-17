@@ -1,0 +1,7 @@
+# DSH Studio zh-starter：中文起步 profile。
+# 用法：整个目录复制到 ~/.dsh/profiles/zh-starter，
+#       然后 npx @deepseek-ai/dsh --profile zh-starter "你的任务"
+# 模型接入：按 dsh-guide-zh 第 2 章把 providers 换成你的网关。
+- id: llm-pi-ai
+  config:
+    providers: {}   # ← 在这里声明你的模型路由（见指南第 2 章）
