@@ -1,8 +1,9 @@
-# Rakun（小浣熊）桌面工作台 — 设计文档
+# DSH Studio — 设计文档
 
 日期：2026-08-17 · 状态：已评审通过（用户拍板）
-品牌名：**Rakun · 小浣熊**（2026-08-17 定案。raccoon 的日式拼法，全球可念、拼写可独占；浣熊=灵巧小手干活的吉祥物 IP；中文"小浣熊"自带干脆面/水浒卡怀旧梗）
-GitHub org：`getrakun`（已实查可注册，W1 注册；`rakunhq` 备用）；npm 走 `@getrakun/*` scope 或 `rakun-desktop` 包名（npm org `rakun` 已被占）。W1 尽调：学术界有同名关键词抽取算法 RaKUn（小众、不同领域），确认无商标冲突即可。
+品牌名：**DSH Studio**（2026-08-17 定案，经三轮迭代：搭子/Dazi → Rakun → DSH Studio）。命名策略：名字绑定 dsh 关键词吃搜索与生态关联（先例：Open WebUI 起家时名为 Ollama WebUI，做大后独立改名——本项目保留同样的改名权）；**吉祥物 = 小浣熊**（戴挽具的浣熊，harness 本义即挽具），承担记忆点与视觉 IP。
+命名红线：只绑 `dsh`/`harness`，**不绑 "DeepSeek"**（商标+避免冒充官方；官方社区惯例为 `dsh-plugin` 话题）。
+GitHub org：`dsh-studio`（已实查空位，**当日注册**——`dsh-desktop` 发布 4 天已被抢占，赛道有人在跑）；npm：`dsh-studio` 包名同为空位。
 
 ## 1. 背景与定位
 
