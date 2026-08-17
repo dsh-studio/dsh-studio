@@ -1,20 +1,21 @@
 # Sidecar 打包 Spike 结论
 
-日期：2026-08-17 · 状态：进行中（构建结果待回填）
+日期：2026-08-17 · 状态：核心验证完成
 
 ## 数字
 
 - runtime 体积（未压缩）：node **191MB** + dsh node_modules（531 包）**343MB** = **534MB**
-- .app 总体积：（构建后回填）
-- Rust 首次构建耗时：（回填）；codesign 耗时：（回填）
-- 冷启动到窗口可交互：（回填）
+- .app 总体积：**544MB**（arm64，ad-hoc 签名）
+- 构建耗时：**141s 全程**（其中 Rust release 编译 130s；资源拷贝+codesign 仅 **~11s**——担心的万文件签名卡死未发生）
+- 冷启动到窗口可交互：（待人工点按记录）
 
 ## 验收结果
 
 - [x] `prepare-runtime.sh` 一键产出可捆绑 runtime，smoke `dsh --version` → `0.1.0-rc.6`
-- [ ] 打包产物内 keyless dump-config 通（回填）
-- [ ] 带 key 真任务通 / 未测（原因）
-- [ ] Windows CI 通 / 失败摘要（推送 org 后触发）
+- [x] **打包产物内 keyless dump-config 通**：直接以 `.app/Contents/Resources/runtime/node/bin/node + .../dsh/lib/bin.js` 调用，完整配置树输出，DSH_HOME 隔离正常
+- [ ] GUI 按钮 → Rust spawn → 流式回显（app 已启动，待人工点按确认）
+- [ ] 带 key 真任务：未测（模型路由未就绪，非阻塞）
+- [ ] Windows CI：待推送 org 后手动触发
 
 ## 坑与结论
 
@@ -24,4 +25,4 @@
 
 ## 判定
 
-（构建验收后回填：sidecar 路线 GO / 转 postinstall 下载方案）
+**sidecar 路线 GO**。资源捆绑、包内 spawn、DSH_HOME 隔离、签名速度全部通过；唯一的实质问题是 544MB 体积，属于可优化项而非路线否决项（见"坑与结论"第 2 条的裁剪路径）。W2 按 spec 架构开工，体积优化排入 W5 打包周。
