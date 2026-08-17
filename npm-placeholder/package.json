@@ -1,0 +1,8 @@
+{
+  "name": "dsh-studio",
+  "version": "0.0.1",
+  "description": "DSH Studio — desktop workbench for DeepSeek Harness (dsh). Coming soon.",
+  "bin": { "dsh-studio": "./index.js" },
+  "repository": "github:dsh-studio/dsh-studio",
+  "license": "MIT"
+}
