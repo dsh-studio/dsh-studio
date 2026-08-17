@@ -27,6 +27,7 @@
 5. **流式输出必须按帧批量渲染**。逐行刷 DOM 时几百行的输出能堵死主线程,连带拖拽/滚动失灵;方案:行缓冲 + requestAnimationFrame 合帧插入 DocumentFragment。
 6. AI 生成的图标"透明角"实为实心黑;且新版 macOS 会给自带圆角的图标再包系统底盘。**图标交付物必须是全出血方形**(角像素自检),圆角交系统。
 7. 默认审批策略(ask)在 headless 下无应答通道会永久挂起,表现为"应用卡死"。spike 用"权限选择器+停止按钮"绕过;**W2 第一优先级是把审批请求接成 UI 确认卡**。
+8. **Tauri v2 的 `core:default` 权限集不含 `window:allow-start-dragging`**——Overlay 无标题栏应用的拖拽区会静默失灵(无报错)。capabilities 必须显式加 `core:window:allow-start-dragging`(双击最大化另需 `allow-toggle-maximize`)。此坑伪装成"偶发拖不动",实际是从未生效,排查时先验权限再查区域。
 
 ## 判定
 
