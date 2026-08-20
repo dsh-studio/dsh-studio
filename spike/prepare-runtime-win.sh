@@ -7,6 +7,8 @@
 # 用法:bash prepare-runtime-win.sh [目标目录,默认脚本同级]
 set -euo pipefail
 cd "$(dirname "$0")"
+# 与 mac 版一致:抬高 Node 堆上限,防大依赖树安装 OOM
+export NODE_OPTIONS="--max-old-space-size=4096"
 TARGET="${1:-runtime}"
 NODE_VER=v24.14.0
 DSH_VER=0.1.0-rc.6   # 与 mac 版捆绑一致;升级需两平台同步 + 全量回归

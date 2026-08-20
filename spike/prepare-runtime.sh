@@ -3,6 +3,8 @@
 # node 目录会被裁剪到只剩 bin/node（省 ~77MB）；依赖树按用户决策暂不裁。
 set -euo pipefail
 cd "$(dirname "$0")"
+# CI 的 mac runner 内存紧,npm 装 dsh 的大依赖树会撞 V8 默认 2GB 堆上限(OOM, SIGABRT)
+export NODE_OPTIONS="--max-old-space-size=4096"
 NODE_VER=v24.14.0
 ARCH=darwin-arm64
 mkdir -p runtime && cd runtime
