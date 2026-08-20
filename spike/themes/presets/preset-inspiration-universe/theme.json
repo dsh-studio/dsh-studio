@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "preset-inspiration-universe",
+  "name": "灵感小宇宙",
+  "appearance": "light",
+  "image": "background.webp",
+  "colors": {
+    "accent": "#2dbdb7"
+  },
+  "art": {
+    "focusX": 0.5,
+    "focusY": 0.5
+  },
+  "effects": {
+    "brightness": 1.0,
+    "panelOpacity": 0.4,
+    "blur": 0
+  },
+  "attribution": {
+    "author": "axdlee",
+    "license": "CC BY 4.0",
+    "sourceUrl": "https://api.dreamskin.cc/v1/themes/ver_f2b255d03e6ac7f91ada",
+    "checksum": "ab8bb8bc271a125429b3635524b685e78ea7b07bae97a90bced320fd15f3b006"
+  }
+}

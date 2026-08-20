@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "preset-gothic-void-crusade",
+  "name": "Gothic Void Crusade",
+  "appearance": "dark",
+  "image": "background.webp",
+  "colors": {
+    "accent": "#c8a55a"
+  },
+  "art": {
+    "focusX": 0.76,
+    "focusY": 0.45
+  },
+  "effects": {
+    "brightness": 0.96,
+    "panelOpacity": 0.42,
+    "blur": 0
+  },
+  "attribution": {
+    "author": "seansong-ideogram",
+    "license": "MIT",
+    "sourceUrl": "https://github.com/Fei-Away/Codex-Dream-Skin/blob/main/macos/presets/preset-gothic-void-crusade/background.jpg",
+    "checksum": "5b17e8799623b32c1c55eb309f5bef8fa9543e39c2c07ad8ac0b4dc0ccd90e0b"
+  }
+}

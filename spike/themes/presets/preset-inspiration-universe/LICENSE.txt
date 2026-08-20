@@ -1,0 +1,16 @@
+灵感小宇宙
+Copyright (c) axdlee
+
+Licensed under the Creative Commons Attribution 4.0 International License
+(CC BY 4.0).
+
+You are free to share and adapt this work for any purpose, provided that you
+give appropriate credit, provide a link to the license, and indicate if changes
+were made. No additional legal or technological restrictions may be applied.
+
+License: https://creativecommons.org/licenses/by/4.0/
+Legal code: https://creativecommons.org/licenses/by/4.0/legalcode
+
+DSH Studio change notice: the source image was decoded, resized without
+upscaling, stripped of metadata, and re-encoded as WebP. The composition and
+subject matter were not altered.

@@ -1,0 +1,5 @@
+# dsh-studio-skills-panel:插入技能面板插件行。纯 UI 插件,无 host 侧行为。
+
+- insert:
+    - id: studio-skills-panel
+      name: dsh-studio-skills-panel

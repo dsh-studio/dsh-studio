@@ -1,0 +1,15 @@
+{
+  "name": "dsh-studio-providers",
+  "version": "0.1.0",
+  "description": "DSH Studio 预设供应商路由 — 纯配置 bundle,API 全走官方端点,邀请只在注册链接层",
+  "type": "module",
+  "exports": {
+    ".": "./lib/index.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

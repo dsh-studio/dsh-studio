@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "DSH Studio Spike",
+  "productName": "DSH Studio",
   "version": "0.1.0",
-  "identifier": "com.dshstudio.spike",
+  "identifier": "com.dshstudio.app",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",
@@ -29,7 +29,15 @@
   "bundle": {
     "active": true,
     "targets": ["app"],
-    "resources": { "../../runtime/": "runtime/" },
+    "resources": {
+      "../../runtime/": "runtime/",
+      "../../plugins/dsh-studio-brand/": "plugins/dsh-studio-brand/",
+      "../../plugins/dsh-studio-providers/": "plugins/dsh-studio-providers/",
+      "../../plugins/dsh-studio-themes/": "plugins/dsh-studio-themes/",
+      "../../plugins/dsh-studio-skills-panel/": "plugins/dsh-studio-skills-panel/",
+      "../../skills/": "skills/",
+      "../../themes/": "themes/"
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

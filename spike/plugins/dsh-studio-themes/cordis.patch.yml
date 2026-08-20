@@ -1,0 +1,5 @@
+# dsh-studio-themes:插入皮肤插件行。纯 UI 插件,无 host 侧行为。
+
+- insert:
+    - id: studio-themes
+      name: dsh-studio-themes

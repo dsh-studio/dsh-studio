@@ -1,0 +1,27 @@
+# dsh-studio-providers:预设推荐供应商路由。
+# 决策依据 docs/research/2026-08-20-channel-rebate-research.md:
+#   - API 一律走官方端点(不做流量中转,零合规风险)
+#   - 邀请/送额度只发生在"注册链接"层(设置页文案/引导),与 API 流量解耦
+#   - DeepSeek 官方是默认路由(dsh-base 已配),这里只补第三方推荐位
+# 注意:patch 整体替换目标行 config;llm-pi-ai 在 base/web-app 层是裸行,无需抄底。
+
+- id: llm-pi-ai
+  config:
+    providers:
+      # 硅基流动:OpenAI 兼容,pi-ai 目录外的声明路由。注册送 2000 万 tokens(约 ¥16)。
+      siliconflow:
+        displayName: 硅基流动 SiliconFlow
+        apiKeyEnv: SILICONFLOW_API_KEY
+        api: openai-completions
+        baseURL: https://api.siliconflow.cn/v1
+        models:
+          - id: deepseek-ai/DeepSeek-V4-Flash
+            contextWindow: 1000000
+            maxTokens: 16384
+          - id: deepseek-ai/DeepSeek-V4-Pro
+            contextWindow: 1000000
+            maxTokens: 16384
+      # OpenRouter:pi-ai 目录路由,endpoint/协议/模型表继承目录,只需凭据。
+      openrouter:
+        displayName: OpenRouter
+        apiKeyEnv: OPENROUTER_API_KEY

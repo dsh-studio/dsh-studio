@@ -1,0 +1,12 @@
+[[permission]]
+identifier = "allow-theme-commands"
+description = "Allows DSH Studio's loopback UI to manage only the app-owned theme store."
+commands.allow = [
+  "theme_catalog",
+  "theme_load",
+  "theme_import_image",
+  "theme_save",
+  "theme_activate",
+  "theme_delete",
+  "theme_discard_stage",
+]

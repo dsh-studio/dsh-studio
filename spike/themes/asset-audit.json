@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-08-20",
+  "presets": [
+    {
+      "id": "preset-gothic-void-crusade",
+      "author": "seansong-ideogram",
+      "license": "MIT",
+      "sourceUrl": "https://raw.githubusercontent.com/Fei-Away/Codex-Dream-Skin/main/macos/presets/preset-gothic-void-crusade/background.jpg",
+      "rightsUrl": "https://github.com/Fei-Away/Codex-Dream-Skin/blob/main/macos/NOTICE.md",
+      "sourceVersion": "Codex-Dream-Skin main, PR #134",
+      "provenance": "Contributor artwork distributed as the public installer default",
+      "sourceSha256": "b76a7cbe2ff9d923846e931984d243a7ba1f25de8d190b5c6412c809c41aee42",
+      "normalizedSha256": "5b17e8799623b32c1c55eb309f5bef8fa9543e39c2c07ad8ac0b4dc0ccd90e0b",
+      "thumbnailSha256": "4325eb5194e5ff116e3b5363c4b86b18e4c11341422ad5cd51009508112efc6c"
+    },
+    {
+      "id": "preset-milky-way",
+      "author": "F4",
+      "license": "MIT",
+      "sourceUrl": "https://api.dreamskin.cc/v1/themes/ver_5f02aacdf1fc16b53c90/download",
+      "rightsUrl": "https://api.dreamskin.cc/v1/themes/ver_5f02aacdf1fc16b53c90",
+      "sourceVersion": "ver_5f02aacdf1fc16b53c90, theme 0.1.0",
+      "provenance": "Photographed by the publisher with a Sony camera in Malaysia",
+      "packageSha256": "1d0bdb18bec984ef509e396c6c87c686d20fc28781d19bd0ef575d44a0d5a26e",
+      "sourceSha256": "f2084edb518161876f7573c7a6eb6c86c65351e751f3d2e38c67f393c7cbdcd3",
+      "normalizedSha256": "f61008f4dbd54578e4dc13ccf2f150f069a07cdf19f3f622e795241ef9ac371e",
+      "thumbnailSha256": "cf4abcb83e59d6e56b78a6e1e48559f39fbd26103514b1a4d2c2b587a6536e91"
+    },
+    {
+      "id": "preset-sunset-voyage",
+      "author": "Joker Pan",
+      "license": "MIT",
+      "sourceUrl": "https://api.dreamskin.cc/v1/themes/ver_39e9254e451200ea80b0/download",
+      "rightsUrl": "https://api.dreamskin.cc/v1/themes/ver_39e9254e451200ea80b0",
+      "sourceVersion": "ver_39e9254e451200ea80b0, theme 2.0.0",
+      "provenance": "AI-generated with GPT; generic sunset landscape",
+      "packageSha256": "6f0869f962c9e5a49c5fc84c0b83b8e5dd1f1eb784b0e6a5f5abfaf66bf10181",
+      "sourceSha256": "22f399e981ac3f93cf1b3ae35a0cd70b3a5432ed8ed9e2bc7c8aec885af3f5eb",
+      "normalizedSha256": "8bc49e6695ca1ecf361ee88ac7a1fcb4ae94a1b523d243100f760b5d28893534",
+      "thumbnailSha256": "4589586cead1db2f80aa01f9741f46e0e2964eee0861419a027a28e0531259d4"
+    },
+    {
+      "id": "preset-inspiration-universe",
+      "author": "axdlee",
+      "license": "CC BY 4.0",
+      "sourceUrl": "https://api.dreamskin.cc/v1/themes/ver_f2b255d03e6ac7f91ada/download",
+      "rightsUrl": "https://api.dreamskin.cc/v1/themes/ver_f2b255d03e6ac7f91ada",
+      "sourceVersion": "ver_f2b255d03e6ac7f91ada, theme 0.1.0",
+      "provenance": "AI-generated original artwork with human composition, color, and readability review",
+      "packageSha256": "fcbdc5efebbf43db7cdbbe9ae213b71da6daa33ef59e36e1b8567a6a20cabdc0",
+      "sourceSha256": "4a4db3d0f8583413bfa31e651bf67b5532fe596b2c1554492eb464c851a479a7",
+      "normalizedSha256": "ab8bb8bc271a125429b3635524b685e78ea7b07bae97a90bced320fd15f3b006",
+      "thumbnailSha256": "8986a7706c1c926db8b43ca2fe9081a84a6340b943f23bbf3c61c41544460688"
+    },
+    {
+      "id": "preset-cloud-ascent",
+      "author": "axdlee",
+      "license": "CC BY 4.0",
+      "sourceUrl": "https://api.dreamskin.cc/v1/themes/ver_6daeb3394d0c5a537710/download",
+      "rightsUrl": "https://api.dreamskin.cc/v1/themes/ver_6daeb3394d0c5a537710",
+      "sourceVersion": "ver_6daeb3394d0c5a537710, theme 0.1.1",
+      "provenance": "AI-generated with OpenAI gpt-image-2 and human composition, color, and readability review",
+      "packageSha256": "27d59382b9afb5c18f60fc6cafd68d2b7ae9b9a4f4e219aa078f346f3c18c0a8",
+      "sourceSha256": "1b59f16ead4dac2cf51484afba7669446017a992198fe0ad596308c6687c648e",
+      "normalizedSha256": "4ec5b71b268db05bb6b314ef5bf809afb5463e58c85b8c16080c810fcb1e1f69",
+      "thumbnailSha256": "16518b2e88924f05a903e7598ac44e0db31cd69a3c50735053580cea4e0b20cf"
+    },
+    {
+      "id": "preset-sunrise-coast",
+      "author": "ZhangBoBo Lab",
+      "license": "CC BY 4.0",
+      "sourceUrl": "https://api.dreamskin.cc/v1/themes/ver_4f2cc12fc1ef684e7e8e/download",
+      "rightsUrl": "https://api.dreamskin.cc/v1/themes/ver_4f2cc12fc1ef684e7e8e",
+      "sourceVersion": "ver_4f2cc12fc1ef684e7e8e, theme 0.1.0",
+      "provenance": "AI-generated with OpenAI image generation tools for the ZhangBoBo Freedom Lab theme",
+      "packageSha256": "9a39406321dff37de0a125a519feef658c2e8bef99cc7a37f049729b8c581254",
+      "sourceSha256": "9653e28e356c540d4be2f492ea9d1267368c18e11a35da1256623cce5dfd151f",
+      "normalizedSha256": "4893f21cde3826e64f6be4bdcd1c72b54bfdf36be9e3c333f864b17f52fa5eae",
+      "thumbnailSha256": "5c46aa5ae3f28d08cb3f35e2b87515f9b41ff6e5ebaf9c0b01d463d24ee96fa2"
+    }
+  ]
+}

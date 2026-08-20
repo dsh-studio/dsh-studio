@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "preset-sunset-voyage",
+  "name": "见夕阳",
+  "appearance": "dark",
+  "image": "background.webp",
+  "colors": {
+    "accent": "#ed9032"
+  },
+  "art": {
+    "focusX": 0.72,
+    "focusY": 0.5
+  },
+  "effects": {
+    "brightness": 1.0,
+    "panelOpacity": 0.4,
+    "blur": 0
+  },
+  "attribution": {
+    "author": "Joker Pan",
+    "license": "MIT",
+    "sourceUrl": "https://api.dreamskin.cc/v1/themes/ver_39e9254e451200ea80b0",
+    "checksum": "8bc49e6695ca1ecf361ee88ac7a1fcb4ae94a1b523d243100f760b5d28893534"
+  }
+}

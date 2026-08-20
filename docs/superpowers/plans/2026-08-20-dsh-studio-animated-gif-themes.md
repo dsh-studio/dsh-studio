@@ -20,6 +20,7 @@
 - `spike/app/src-tauri/src/theme/commands.rs` — include GIF in the native picker filter.
 - `spike/app/src-tauri/src/theme/tests.rs` — real GIF fixtures and end-to-end store/service coverage.
 - `spike/plugins/dsh-studio-themes/src/ThemeSettingsSection.tsx` — show GIF in accepted-format copy.
+- `spike/plugins/dsh-studio-themes/src/types.ts` — allow the fixed user-theme GIF asset name in the client contract.
 - `spike/plugins/dsh-studio-themes/tests/ThemeSettingsSection.test.tsx` — lock the copy.
 - `spike/plugins/dsh-studio-themes/tests/renderer.test.ts` — prove GIF data URLs reach the wallpaper layer unchanged.
 - `docs/superpowers/verification/2026-08-20-dsh-studio-theme-switcher.md` — record final automated and native verification.
@@ -341,6 +342,7 @@ git commit -m "feat: import GIF wallpapers from the native picker"
 
 **Files:**
 - Modify: `spike/plugins/dsh-studio-themes/src/ThemeSettingsSection.tsx`
+- Modify: `spike/plugins/dsh-studio-themes/src/types.ts`
 - Modify: `spike/plugins/dsh-studio-themes/tests/ThemeSettingsSection.test.tsx`
 - Modify: `spike/plugins/dsh-studio-themes/tests/renderer.test.ts`
 

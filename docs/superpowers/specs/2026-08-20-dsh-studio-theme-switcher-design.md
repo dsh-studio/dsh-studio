@@ -1,5 +1,15 @@
 # DSH Studio Theme Switcher Design
 
+## Implementation revision — 2026-08-20
+
+User review supersedes the earlier navigation and visual-density decisions below:
+
+- Themes live inside **Settings → General → Appearance** through `settings.general.item`; there is no standalone Themes & Appearance page and no duplicate appearance selector in the local-theme editor.
+- The offline gallery contains six audited Dream Skin themes, not three.
+- Bundled wallpaper defaults use full brightness, `panelOpacity: 0.40`, and no blur so the artwork remains visible. Home/conversation scrims are `0.04`/`0.12`.
+- Theme surfaces use translucent fills, soft elevation, transparent semantic border tokens, and a localized readability wash. Input, card, sidebar, and editor chrome avoid persistent hard outlines; keyboard focus remains explicit.
+- A follow-on approved revision adds bounded animated GIF imports while preserving static WebP gallery thumbnails; see `2026-08-20-dsh-studio-animated-gif-themes-design.md`.
+
 **Date:** 2026-08-20
 **Status:** Approved
 **Scope:** macOS and Windows desktop builds of DSH Studio

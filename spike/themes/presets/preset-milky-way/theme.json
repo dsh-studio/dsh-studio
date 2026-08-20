@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "preset-milky-way",
+  "name": "银河 Milky Way",
+  "appearance": "dark",
+  "image": "background.webp",
+  "colors": {
+    "accent": "#7a65b3"
+  },
+  "art": {
+    "focusX": 0.67,
+    "focusY": 0.71
+  },
+  "effects": {
+    "brightness": 1.0,
+    "panelOpacity": 0.4,
+    "blur": 0
+  },
+  "attribution": {
+    "author": "F4",
+    "license": "MIT",
+    "sourceUrl": "https://api.dreamskin.cc/v1/themes/ver_5f02aacdf1fc16b53c90",
+    "checksum": "f61008f4dbd54578e4dc13ccf2f150f069a07cdf19f3f622e795241ef9ac371e"
+  }
+}

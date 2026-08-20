@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "preset-cloud-ascent",
+  "name": "云上仙途",
+  "appearance": "light",
+  "image": "background.webp",
+  "colors": {
+    "accent": "#69b99a"
+  },
+  "art": {
+    "focusX": 0.5,
+    "focusY": 0.5
+  },
+  "effects": {
+    "brightness": 1.0,
+    "panelOpacity": 0.4,
+    "blur": 0
+  },
+  "attribution": {
+    "author": "axdlee",
+    "license": "CC BY 4.0",
+    "sourceUrl": "https://api.dreamskin.cc/v1/themes/ver_6daeb3394d0c5a537710",
+    "checksum": "4ec5b71b268db05bb6b314ef5bf809afb5463e58c85b8c16080c810fcb1e1f69"
+  }
+}

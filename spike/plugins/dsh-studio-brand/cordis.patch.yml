@@ -1,0 +1,6 @@
+# The dsh-studio-brand bundle patch: inserts the brand surface plugin row on
+# top of the dsh-base / dsh-web-app layers. No config — the plugin is pure UI.
+
+- insert:
+    - id: studio-brand
+      name: dsh-studio-brand

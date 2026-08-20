@@ -1,5 +1,7 @@
 # DSH Studio Theme Switcher Implementation Plan
 
+> **2026-08-20 implementation revision:** User review supersedes the earlier count, placement, and visual defaults in this plan. Ship six audited presets; register under `settings.general.item`; remove the duplicate appearance selector; use full-brightness, no-blur wallpaper defaults with low scrims; and replace persistent border chrome with translucent surfaces, soft elevation, and preserved focus indicators. A follow-on approved plan, `2026-08-20-dsh-studio-animated-gif-themes.md`, adds bounded animated GIF imports.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add a safe, offline, full-window theme gallery and local-image theme editor to the macOS and Windows DSH Studio desktop application.

@@ -1,0 +1,26 @@
+{
+  "name": "dsh-studio-skills-panel",
+  "version": "0.1.0",
+  "description": "DSH Studio 技能面板:空会话时在 composer 下方展示技能卡,点击预填 /技能名 任务",
+  "type": "module",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "bundle": "tsdown"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ],
+      "platform": "web"
+    }
+  }
+}

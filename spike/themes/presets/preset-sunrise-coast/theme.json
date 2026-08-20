@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "preset-sunrise-coast",
+  "name": "Sunrise Coast Lab",
+  "appearance": "light",
+  "image": "background.webp",
+  "colors": {
+    "accent": "#5ea9ff"
+  },
+  "art": {
+    "focusX": 0.72,
+    "focusY": 0.42
+  },
+  "effects": {
+    "brightness": 1.0,
+    "panelOpacity": 0.4,
+    "blur": 0
+  },
+  "attribution": {
+    "author": "ZhangBoBo Lab",
+    "license": "CC BY 4.0",
+    "sourceUrl": "https://api.dreamskin.cc/v1/themes/ver_4f2cc12fc1ef684e7e8e",
+    "checksum": "4893f21cde3826e64f6be4bdcd1c72b54bfdf36be9e3c333f864b17f52fa5eae"
+  }
+}
