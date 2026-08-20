@@ -35,9 +35,12 @@ DSH Studio 把这段路砍掉,给不碰终端的中文用户一个能直接上�
 
 ## 截图
 
-| 新会话:技能建议卡 | 设置:技能管理 |
-|---|---|
-| ![技能建议卡](docs/assets/screenshots/hero-skill-cards.jpg) | ![技能管理](docs/assets/screenshots/settings-skills.jpg) |
+![银河主题](docs/assets/screenshots/theme-milky-way.jpg)
+<p align="center"><i>Dream Skin「银河 Milky Way」主题下的工作台</i></p>
+
+| 新会话:技能建议卡 | 设置:技能管理 | 设置:Dream Skin 主题库 |
+|---|---|---|
+| ![技能建议卡](docs/assets/screenshots/hero-skill-cards.jpg) | ![技能管理](docs/assets/screenshots/settings-skills.jpg) | ![主题库](docs/assets/screenshots/theme-gallery.jpg) |
 
 ## 安装
 
