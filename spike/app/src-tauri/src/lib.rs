@@ -68,8 +68,30 @@ fn studio_asset_dir(
     ))
 }
 
+/// 平台各自的 node 可执行文件相对路径(Windows 发行版没有 bin/ 层)。
+#[cfg(windows)]
+const NODE_RELATIVE: &str = "node/node.exe";
+#[cfg(not(windows))]
+const NODE_RELATIVE: &str = "node/bin/node";
+
+/// Windows 下隐藏子进程控制台窗口(CREATE_NO_WINDOW)。
+#[cfg(windows)]
+fn hide_console(command: &mut Command) {
+    use std::os::windows::process::CommandExt;
+    command.creation_flags(0x0800_0000);
+}
+#[cfg(not(windows))]
+fn hide_console(_command: &mut Command) {}
+
+/// 用户主目录(dsh 会话的默认工作区根)。
+fn home_dir_fallback() -> String {
+    std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .unwrap_or_else(|_| ".".into())
+}
+
 fn runtime_dir(app: &AppHandle) -> Result<PathBuf, String> {
-    studio_asset_dir(app, "DSH_STUDIO_RUNTIME_DIR", "runtime", "node/bin/node")
+    studio_asset_dir(app, "DSH_STUDIO_RUNTIME_DIR", "runtime", NODE_RELATIVE)
 }
 
 fn plugins_dir(app: &AppHandle) -> Result<PathBuf, String> {
@@ -218,7 +240,9 @@ fn provision_skills(home: &Path, skills: &Path) -> Result<(), String> {
     Ok(())
 }
 
-/// 建立(或重建)指向资源目录的符号链接。
+/// 建立(或重建)指向资源目录的符号链接。Windows 普通用户没有符号链接权限
+/// (要开发者模式),失败时退化为整目录复制——插件/技能都是 KB 级文本,
+/// 每次启动重建的成本可忽略。
 fn replace_symlink(src: &Path, link: &Path) -> Result<(), String> {
     if link.symlink_metadata().is_ok() {
         std::fs::remove_file(link)
@@ -228,7 +252,25 @@ fn replace_symlink(src: &Path, link: &Path) -> Result<(), String> {
     #[cfg(unix)]
     std::os::unix::fs::symlink(src, link).map_err(|e| e.to_string())?;
     #[cfg(windows)]
-    std::os::windows::fs::symlink_dir(src, link).map_err(|e| e.to_string())?;
+    if std::os::windows::fs::symlink_dir(src, link).is_err() {
+        copy_dir_recursive(src, link)?;
+    }
+    Ok(())
+}
+
+/// Windows 符号链接兜底:递归复制目录。
+#[cfg(windows)]
+fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), String> {
+    std::fs::create_dir_all(dst).map_err(|e| e.to_string())?;
+    for entry in std::fs::read_dir(src).map_err(|e| e.to_string())?.flatten() {
+        let from = entry.path();
+        let to = dst.join(entry.file_name());
+        if from.is_dir() {
+            copy_dir_recursive(&from, &to)?;
+        } else {
+            std::fs::copy(&from, &to).map_err(|e| e.to_string())?;
+        }
+    }
     Ok(())
 }
 
@@ -236,19 +278,20 @@ fn replace_symlink(src: &Path, link: &Path) -> Result<(), String> {
 /// 导航过去。stdout/stderr 同时转发成 `dsh-line` 事件给启动页显示。
 fn spawn_web_host(app: &AppHandle) -> Result<(), String> {
     let rt = runtime_dir(app)?;
-    let node = rt.join("node/bin/node");
+    let node = rt.join(NODE_RELATIVE);
     let entry = rt.join("app/node_modules/@deepseek-ai/dsh/lib/bin.js");
     let home = dsh_home(app)?;
-    let workdir = std::env::var("HOME").unwrap_or_else(|_| "/".into());
-    let mut child = Command::new(&node)
+    let workdir = home_dir_fallback();
+    let mut command = Command::new(&node);
+    command
         .arg(&entry)
         .args(["web", "--host", "127.0.0.1", "--port", "0"])
         .current_dir(&workdir)
         .env("DSH_HOME", &home)
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(|e| e.to_string())?;
+        .stderr(Stdio::piped());
+    hide_console(&mut command);
+    let mut child = command.spawn().map_err(|e| e.to_string())?;
     let stdout = child.stdout.take().ok_or("no stdout")?;
     let stderr = child.stderr.take().ok_or("no stderr")?;
     *app.state::<RunningChild>().0.lock().unwrap() = Some(child);
@@ -414,17 +457,17 @@ fn run_dsh(
     if let Some(mut old) = state.0.lock().unwrap().take() {
         let _ = old.kill();
     }
-    let res = app.path().resource_dir().map_err(|e| e.to_string())?;
-    let node = res.join("runtime/node/bin/node");
-    let dsh = res.join("runtime/app/node_modules/@deepseek-ai/dsh");
+    let rt = runtime_dir(&app)?;
+    let node = rt.join(NODE_RELATIVE);
     // 入口已核实:package.json bin = {"dsh": "lib/bin.js"}
-    let entry = dsh.join("lib/bin.js");
+    let entry = rt.join("app/node_modules/@deepseek-ai/dsh/lib/bin.js");
     let home = dsh_home(&app)?;
     // 工作目录=dsh 的沙箱工作区(sandbox-policy workspaceRoot 取 cwd);默认用户主目录
     let workdir = cwd
         .filter(|s| !s.is_empty())
-        .unwrap_or_else(|| std::env::var("HOME").unwrap_or_else(|_| "/".into()));
-    let mut child = Command::new(&node)
+        .unwrap_or_else(home_dir_fallback);
+    let mut command = Command::new(&node);
+    command
         .arg(&entry)
         .args(&args)
         .current_dir(&workdir)
@@ -434,9 +477,9 @@ fn run_dsh(
             mode.unwrap_or_else(|| "workspace-write".into()),
         )
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(|e| e.to_string())?;
+        .stderr(Stdio::piped());
+    hide_console(&mut command);
+    let mut child = command.spawn().map_err(|e| e.to_string())?;
     let stdout = child.stdout.take().ok_or("no stdout")?;
     let stderr = child.stderr.take().ok_or("no stderr")?;
     *state.0.lock().unwrap() = Some(child);

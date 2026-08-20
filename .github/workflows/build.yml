@@ -1,0 +1,64 @@
+# 双平台打包:macOS (.app) + Windows (NSIS 安装器)。
+# 触发:手动 workflow_dispatch,或推 v* 标签。
+# 说明:两平台的捆绑 runtime 都在 runner 上现场组装(平台依赖必须原生解析);
+# 产物均未签名——mac 需右键打开,Windows 会有 SmartScreen 提示,签名排在 alpha 后。
+name: build
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+jobs:
+  bundle:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            prepare: spike/prepare-runtime.sh
+            artifact: spike/app/src-tauri/target/release/bundle/macos
+          - os: windows-latest
+            prepare: spike/prepare-runtime-win.sh
+            artifact: spike/app/src-tauri/target/release/bundle/nsis
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Build client plugins
+        shell: bash
+        run: |
+          cd spike/plugins
+          pnpm install
+          pnpm -r run bundle
+
+      - name: Prepare bundled runtime
+        shell: bash
+        run: bash ${{ matrix.prepare }}
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: spike/app/src-tauri
+
+      - name: Tauri build
+        shell: bash
+        run: |
+          cd spike/app
+          pnpm install
+          pnpm tauri build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dsh-studio-${{ matrix.os }}
+          path: ${{ matrix.artifact }}
+          if-no-files-found: error

@@ -4,3 +4,9 @@ target/
 spike/runtime/
 .DS_Store
 .env
+# 本地 dsh 数据目录:含真实 API key、会话记录,永不入库
+spike/dev-home/
+spike/dsh-home/
+spike/tmp-home*/
+# 会话级工作区
+.superpowers/
