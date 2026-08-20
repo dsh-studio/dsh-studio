@@ -35,8 +35,11 @@ DSH Studio 把这段路砍掉,给不碰终端的中文用户一个能直接上�
 
 ## 截图
 
-![银河主题](docs/assets/screenshots/theme-milky-way.jpg)
-<p align="center"><i>Dream Skin「银河 Milky Way」主题下的工作台</i></p>
+一套工作台,两种性格——Dream Skin 主题随心切换:
+
+| 「银河 Milky Way」·沉浸专注 | 「灵感小宇宙」·明快创意 |
+|---|---|
+| ![银河主题](docs/assets/screenshots/theme-milky-way.jpg) | ![灵感小宇宙主题](docs/assets/screenshots/theme-inspiration-universe.jpg) |
 
 | 新会话:技能建议卡 | 设置:技能管理 | 设置:Dream Skin 主题库 |
 |---|---|---|
