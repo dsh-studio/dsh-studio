@@ -1,7 +1,7 @@
 # DSH Studio Theme Switcher Design
 
 **Date:** 2026-08-20
-**Status:** Approved in conversation; awaiting written-spec review
+**Status:** Approved
 **Scope:** macOS and Windows desktop builds of DSH Studio
 
 ## 1. Summary
