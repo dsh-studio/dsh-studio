@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "repository": "https://github.com/Lum1104/dsh-browser",
+  "commit": "82eed45837c8878727f6231b0ca0fec2049ccc0a",
+  "sourceArchiveSha256": "88b0e0ebc4c5b464735f6b09efbc7d191d2aaaf13fbd51f738e5fa1618b22624",
+  "bridge": {
+    "package": "@yuxianglin/dsh-bridge-browser",
+    "version": "0.0.2"
+  },
+  "extension": {
+    "package": "dsh-browser-extension",
+    "version": "0.1.1"
+  },
+  "build": [
+    "pnpm install --frozen-lockfile --ignore-scripts",
+    "pnpm run build"
+  ]
+}

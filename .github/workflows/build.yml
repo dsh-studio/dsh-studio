@@ -40,16 +40,16 @@ jobs:
           pnpm install
           pnpm -r run bundle
 
+      - name: Prepare bundled runtime
+        shell: bash
+        run: bash ${{ matrix.prepare }}
+
       - name: Verify workbench assembly
         shell: bash
         run: |
           node --test spike/workbench/assemble.test.mjs
           node spike/workbench/assemble.mjs
           test -f spike/workbench/dist/workbench.lock.json
-
-      - name: Prepare bundled runtime
-        shell: bash
-        run: bash ${{ matrix.prepare }}
 
       - uses: dtolnay/rust-toolchain@stable
 

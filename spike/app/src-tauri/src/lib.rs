@@ -12,7 +12,8 @@ use theme::commands::{
     theme_load, theme_save,
 };
 use workbench::commands::{
-    workbench_catalog, workbench_repair, workbench_set_enabled, workbench_start_safe_mode,
+    workbench_catalog, workbench_market_catalog, workbench_open_tui, workbench_prepare_browser,
+    workbench_repair, workbench_set_enabled, workbench_start_safe_mode,
 };
 use workbench::model::{PreparedLaunch, WorkbenchMode};
 use workbench::service::{RecoveryAction, WorkbenchService};
@@ -719,6 +720,8 @@ pub fn run() {
                 workbench_assets_dir(&handle)?,
                 dsh_home(&handle)?,
                 workbench_data,
+                runtime_dir(&handle)?.join("app/node_modules"),
+                runtime_dir(&handle)?.join("tui/node_modules"),
             )
             .map_err(|error| error.to_string())?;
             app.manage(workbench);
@@ -747,7 +750,10 @@ pub fn run() {
             workbench_catalog,
             workbench_set_enabled,
             workbench_repair,
-            workbench_start_safe_mode
+            workbench_start_safe_mode,
+            workbench_open_tui,
+            workbench_prepare_browser,
+            workbench_market_catalog
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

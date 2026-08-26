@@ -12,6 +12,14 @@ pub enum WorkbenchMode {
     Safe,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum ProfileRole {
+    Web,
+    Tui,
+    Catalog,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct LockedComponent {
@@ -21,6 +29,10 @@ pub struct LockedComponent {
     pub package: String,
     pub version: String,
     pub source: String,
+    pub commit: String,
+    pub supported_dsh: Vec<String>,
+    pub profile_role: ProfileRole,
+    pub runtime_dependencies: Vec<String>,
     pub artifact_path: String,
     pub artifact_sha256: String,
     pub license: String,
@@ -70,6 +82,7 @@ pub struct ComponentView {
     pub package: String,
     pub version: String,
     pub source: String,
+    pub profile_role: ProfileRole,
     pub license: String,
     pub permissions: Vec<String>,
     pub required: bool,
@@ -94,6 +107,8 @@ pub struct ManagedProfileRecord {
     pub generation: String,
     pub packages: Vec<String>,
     pub bundles: Vec<String>,
+    #[serde(default)]
+    pub runtime_dependencies: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

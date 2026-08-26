@@ -2,7 +2,7 @@ import type { ReactElement } from 'react'
 import { useState, useSyncExternalStore } from 'react'
 
 import type { WorkbenchController } from './controller'
-import type { ComponentHealth, WorkbenchSnapshot } from './types'
+import type { ComponentHealth, MarketCatalogPage, WorkbenchSnapshot } from './types'
 
 interface ControllerFace {
   subscribe(listener: () => void): () => void
@@ -10,6 +10,9 @@ interface ControllerFace {
   setEnabled(componentId: string, enabled: boolean): Promise<void>
   repair(): Promise<void>
   startSafeMode(): Promise<void>
+  openTui(): Promise<string>
+  prepareBrowser(): Promise<string>
+  marketCatalog(query: string, limit?: number): Promise<MarketCatalogPage>
 }
 
 const PERMISSION_LABELS: Record<string, string> = {
@@ -17,8 +20,13 @@ const PERMISSION_LABELS: Record<string, string> = {
   'workspace-write': '工作区写入',
   terminal: '终端执行',
   browser: '浏览器控制',
+  'browser-control': '浏览器控制',
   network: '网络访问',
   model: '模型调用',
+  agent: 'Agent 协作',
+  subagent: '子 Agent',
+  process: '本地进程',
+  'catalog-read': '目录只读',
 }
 
 const HEALTH_LABELS: Record<ComponentHealth, string> = {
@@ -40,9 +48,48 @@ export function WorkbenchSettingsSection({
     controller.getSnapshot,
   )
   const [confirmSafeMode, setConfirmSafeMode] = useState(false)
-  const busy =
-    snapshot.pendingComponentId !== null || snapshot.pendingGlobalAction !== null
+  const [pendingAction, setPendingAction] = useState<'tui' | 'browser' | 'market' | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [actionNotice, setActionNotice] = useState<string | null>(null)
+  const [marketQuery, setMarketQuery] = useState('')
+  const [marketPage, setMarketPage] = useState<MarketCatalogPage | null>(null)
+  const busy = snapshot.pendingComponentId !== null ||
+    snapshot.pendingGlobalAction !== null || pendingAction !== null
   const catalog = snapshot.catalog
+
+  async function runPathAction(action: 'tui' | 'browser'): Promise<void> {
+    if (busy) return
+    setPendingAction(action)
+    setActionError(null)
+    setActionNotice(null)
+    try {
+      if (action === 'tui') {
+        await controller.openTui()
+        setActionNotice('DSH TUI 已在独立终端中打开。')
+      } else {
+        await controller.prepareBrowser()
+        setActionNotice('Chrome 扩展已准备好；请在扩展页选择“加载已解压的扩展”。')
+      }
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : String(error))
+    } finally {
+      setPendingAction(null)
+    }
+  }
+
+  async function loadMarket(query: string): Promise<void> {
+    if (busy) return
+    setPendingAction('market')
+    setActionError(null)
+    setActionNotice(null)
+    try {
+      setMarketPage(await controller.marketCatalog(query, 50))
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : String(error))
+    } finally {
+      setPendingAction(null)
+    }
+  }
 
   return (
     <section className="dshstudio-workbench" aria-busy={busy}>
@@ -69,6 +116,16 @@ export function WorkbenchSettingsSection({
       {snapshot.error !== null ? (
         <div className="dshstudio-workbench__error" role="alert">
           {snapshot.error}
+        </div>
+      ) : null}
+      {actionError !== null ? (
+        <div className="dshstudio-workbench__error" role="alert">
+          {actionError}
+        </div>
+      ) : null}
+      {actionNotice !== null ? (
+        <div className="dshstudio-workbench__notice" role="status">
+          {actionNotice}
         </div>
       ) : null}
 
@@ -101,6 +158,34 @@ export function WorkbenchSettingsSection({
                     {HEALTH_LABELS[component.health]}
                     {component.required ? ' · 核心组件' : ''}
                   </div>
+                  {component.id === 'tui' ? (
+                    <button
+                      type="button"
+                      className="dshstudio-workbench__inline-action"
+                      disabled={busy || !component.effectiveEnabled}
+                      onClick={() => void runPathAction('tui')}
+                    >
+                      {pendingAction === 'tui' ? '正在打开…' : '打开 TUI'}
+                    </button>
+                  ) : component.id === 'browser' ? (
+                    <button
+                      type="button"
+                      className="dshstudio-workbench__inline-action"
+                      disabled={busy || !component.effectiveEnabled}
+                      onClick={() => void runPathAction('browser')}
+                    >
+                      {pendingAction === 'browser' ? '正在准备…' : '准备 Chrome 扩展'}
+                    </button>
+                  ) : component.id === 'market' ? (
+                    <button
+                      type="button"
+                      className="dshstudio-workbench__inline-action"
+                      disabled={busy || !component.effectiveEnabled}
+                      onClick={() => void loadMarket(marketQuery)}
+                    >
+                      {pendingAction === 'market' ? '正在读取…' : '浏览插件目录'}
+                    </button>
+                  ) : null}
                 </div>
                 <button
                   type="button"
@@ -120,6 +205,46 @@ export function WorkbenchSettingsSection({
           })}
         </div>
       )}
+
+      {marketPage !== null ? (
+        <section className="dshstudio-workbench__market" aria-label="DSH Market 只读目录">
+          <div className="dshstudio-workbench__market-head">
+            <div>
+              <strong>DSH Market 只读目录</strong>
+              <div className="dshstudio-workbench__meta">
+                共 {marketPage.total} 项，当前匹配 {marketPage.matched} 项
+              </div>
+            </div>
+            <div className="dshstudio-workbench__market-search">
+              <input
+                aria-label="搜索插件目录"
+                value={marketQuery}
+                onChange={(event) => setMarketQuery(event.currentTarget.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') void loadMarket(marketQuery)
+                }}
+              />
+              <button
+                type="button"
+                className="dshstudio-workbench__button"
+                disabled={busy}
+                onClick={() => void loadMarket(marketQuery)}
+              >
+                搜索
+              </button>
+            </div>
+          </div>
+          <div className="dshstudio-workbench__market-list">
+            {marketPage.plugins.map((plugin) => (
+              <article key={`${plugin.owner ?? ''}/${plugin.name}`}>
+                <strong>{plugin.name}</strong>
+                <span>{plugin.owner ?? 'unknown'}</span>
+                <p>{plugin.description?.zh ?? plugin.description?.en ?? '暂无简介'}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <div className="dshstudio-workbench__actions">
         <button

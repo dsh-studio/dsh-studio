@@ -1,11 +1,14 @@
 use std::fmt::{Display, Formatter};
 
 pub mod artifact;
+pub mod browser;
 pub mod commands;
 pub mod composer;
+pub mod market;
 pub mod model;
 pub mod service;
 pub mod state;
+pub mod tui;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WorkbenchError {

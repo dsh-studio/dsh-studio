@@ -5,7 +5,8 @@ use std::sync::Mutex;
 use super::artifact::{load_lock_structure, verify_component_artifact};
 use super::composer::ProfileComposer;
 use super::model::{
-    ComponentHealth, ComponentView, PreparedLaunch, WorkbenchCatalog, WorkbenchLock, WorkbenchMode,
+    ComponentHealth, ComponentView, PreparedLaunch, ProfileRole, WorkbenchCatalog, WorkbenchLock,
+    WorkbenchMode,
 };
 use super::state::StateStore;
 use super::WorkbenchError;
@@ -21,6 +22,7 @@ struct ServiceState {
     lock: WorkbenchLock,
     state_store: StateStore,
     composer: ProfileComposer,
+    tui_composer: ProfileComposer,
     mode: WorkbenchMode,
     pending: Option<PreparedLaunch>,
     rollback_transaction: Option<String>,
@@ -38,6 +40,8 @@ impl WorkbenchService {
         assets_root: PathBuf,
         home: PathBuf,
         data_root: PathBuf,
+        runtime_packages: PathBuf,
+        tui_runtime_packages: PathBuf,
     ) -> Result<Self, WorkbenchError> {
         let lock = load_lock_structure(&assets_root)?;
         let artifact_errors = verify_artifacts(&assets_root, &lock);
@@ -49,7 +53,14 @@ impl WorkbenchService {
                 assets_root: assets_root.clone(),
                 lock,
                 state_store,
-                composer: ProfileComposer::new(home, assets_root, data_root),
+                composer: ProfileComposer::new(
+                    home.clone(),
+                    assets_root.clone(),
+                    data_root.clone(),
+                )
+                .with_runtime_packages(runtime_packages.clone()),
+                tui_composer: ProfileComposer::new_tui(home, assets_root, data_root.join("tui"))
+                    .with_runtime_package_roots(vec![tui_runtime_packages, runtime_packages]),
                 mode: WorkbenchMode::Normal,
                 pending: None,
                 rollback_transaction: None,
@@ -73,8 +84,34 @@ impl WorkbenchService {
             .inner
             .lock()
             .map_err(|_| WorkbenchError::new("workbench_unavailable", "工作台组件服务暂不可用"))?;
+        let role = inner
+            .lock
+            .components
+            .iter()
+            .find(|component| component.id == id)
+            .map(|component| component.profile_role)
+            .ok_or_else(|| WorkbenchError::new("unknown_component", "工作台组件不存在"))?;
         inner.state_store.set_desired(&inner.lock, id, enabled)?;
+        if role != ProfileRole::Web {
+            inner
+                .state_store
+                .activate_component(&inner.lock, id, enabled)?;
+        }
         catalog_from(&inner)
+    }
+
+    pub fn requires_web_restart(&self, id: &str) -> Result<bool, WorkbenchError> {
+        let inner = self
+            .inner
+            .lock()
+            .map_err(|_| WorkbenchError::new("workbench_unavailable", "工作台组件服务暂不可用"))?;
+        inner
+            .lock
+            .components
+            .iter()
+            .find(|component| component.id == id)
+            .map(|component| component.profile_role == ProfileRole::Web)
+            .ok_or_else(|| WorkbenchError::new("unknown_component", "工作台组件不存在"))
     }
 
     pub fn repair(&self) -> Result<WorkbenchCatalog, WorkbenchError> {
@@ -85,6 +122,41 @@ impl WorkbenchService {
         inner.artifact_errors = verify_artifacts(&inner.assets_root, &inner.lock);
         reject_required_damage(&inner.lock, &inner.artifact_errors)?;
         catalog_from(&inner)
+    }
+
+    pub fn prepare_tui_profile(&self) -> Result<PathBuf, WorkbenchError> {
+        let mut inner = self
+            .inner
+            .lock()
+            .map_err(|_| WorkbenchError::new("workbench_unavailable", "工作台组件服务暂不可用"))?;
+        inner.artifact_errors = verify_artifacts(&inner.assets_root, &inner.lock);
+        ensure_action_component(&inner, "tui", ProfileRole::Tui)?;
+        let state = inner.state_store.load_or_initialize(&inner.lock)?;
+        let transaction =
+            inner
+                .tui_composer
+                .compose(&inner.lock, &state.active, WorkbenchMode::Normal)?;
+        if transaction.changed {
+            inner.tui_composer.discard(&transaction.id)?;
+        }
+        Ok(inner.tui_composer.profile_path())
+    }
+
+    pub fn enabled_artifact(&self, id: &str, role: ProfileRole) -> Result<PathBuf, WorkbenchError> {
+        let inner = self
+            .inner
+            .lock()
+            .map_err(|_| WorkbenchError::new("workbench_unavailable", "工作台组件服务暂不可用"))?;
+        ensure_action_component(&inner, id, role)?;
+        let component = inner
+            .lock
+            .components
+            .iter()
+            .find(|component| component.id == id)
+            .expect("action component validated");
+        verify_component_artifact(&inner.assets_root, component)
+            .map_err(|_| WorkbenchError::new("component_damaged", "组件文件损坏，请先修复组件"))?;
+        Ok(inner.assets_root.join(&component.artifact_path))
     }
 
     pub fn prepare_launch(&self, mode: WorkbenchMode) -> Result<PreparedLaunch, WorkbenchError> {
@@ -160,6 +232,33 @@ impl WorkbenchService {
         }
         Ok(RecoveryAction::Stop)
     }
+}
+
+fn ensure_action_component(
+    inner: &ServiceState,
+    id: &str,
+    role: ProfileRole,
+) -> Result<(), WorkbenchError> {
+    let component = inner
+        .lock
+        .components
+        .iter()
+        .find(|component| component.id == id && component.profile_role == role)
+        .ok_or_else(|| WorkbenchError::new("component_unavailable", "组件未包含在当前版本"))?;
+    if inner.artifact_errors.contains_key(id) {
+        return Err(WorkbenchError::new(
+            "component_damaged",
+            "组件文件损坏，请先修复组件",
+        ));
+    }
+    let state = inner.state_store.load_or_initialize(&inner.lock)?;
+    if !state.active.get(&component.id).copied().unwrap_or(false) {
+        return Err(WorkbenchError::new(
+            "component_disabled",
+            "请先在工作台中启用该组件",
+        ));
+    }
+    Ok(())
 }
 
 fn take_matching_pending(
@@ -249,6 +348,7 @@ fn catalog_from(inner: &ServiceState) -> Result<WorkbenchCatalog, WorkbenchError
                 package: component.package.clone(),
                 version: component.version.clone(),
                 source: component.source.clone(),
+                profile_role: component.profile_role,
                 license: component.license.clone(),
                 permissions: component.permissions.clone(),
                 required: component.required,

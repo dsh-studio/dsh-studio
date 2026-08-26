@@ -6,4 +6,7 @@ commands.allow = [
   "workbench_set_enabled",
   "workbench_repair",
   "workbench_start_safe_mode",
+  "workbench_open_tui",
+  "workbench_prepare_browser",
+  "workbench_market_catalog",
 ]

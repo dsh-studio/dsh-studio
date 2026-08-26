@@ -3,7 +3,9 @@ use std::path::{Component, Path, PathBuf};
 
 use sha2::{Digest, Sha256};
 
-use super::model::{LockedComponent, WorkbenchLock, WorkbenchMode, LOCK_SCHEMA_VERSION};
+use super::model::{
+    LockedComponent, ProfileRole, WorkbenchLock, WorkbenchMode, LOCK_SCHEMA_VERSION,
+};
 use super::WorkbenchError;
 
 fn path_error(code: &'static str, message: &'static str) -> WorkbenchError {
@@ -101,6 +103,42 @@ fn non_empty(values: &[String]) -> bool {
     !values.is_empty() && values.iter().all(|value| !value.trim().is_empty())
 }
 
+fn valid_package_name(value: &str) -> bool {
+    let valid_segment = |segment: &str| {
+        !segment.is_empty()
+            && segment.bytes().all(|byte| {
+                byte.is_ascii_lowercase()
+                    || byte.is_ascii_digit()
+                    || matches!(byte, b'.' | b'_' | b'-')
+            })
+    };
+    if let Some(scoped) = value.strip_prefix('@') {
+        let mut parts = scoped.split('/');
+        let scope = parts.next().unwrap_or_default();
+        let name = parts.next().unwrap_or_default();
+        parts.next().is_none() && valid_segment(scope) && valid_segment(name)
+    } else {
+        !value.contains('/') && valid_segment(value)
+    }
+}
+
+fn valid_exact_version(value: &str) -> bool {
+    let Some((core, prerelease)) = value.split_once('-') else {
+        return false;
+    };
+    let mut numbers = core.split('.');
+    let valid_core = (0..3).all(|_| {
+        numbers
+            .next()
+            .is_some_and(|part| !part.is_empty() && part.bytes().all(|byte| byte.is_ascii_digit()))
+    }) && numbers.next().is_none();
+    valid_core
+        && !prerelease.is_empty()
+        && prerelease
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'-'))
+}
+
 pub fn load_lock_structure(root: &Path) -> Result<WorkbenchLock, WorkbenchError> {
     let raw = std::fs::read_to_string(root.join("workbench.lock.json"))
         .map_err(|_| path_error("lock_missing", "工作台组件清单缺失"))?;
@@ -118,14 +156,37 @@ pub fn load_lock_structure(root: &Path) -> Result<WorkbenchLock, WorkbenchError>
         if !ids.insert(component.id.as_str()) || !packages.insert(component.package.as_str()) {
             return Err(path_error("duplicate_component", "工作台组件标识重复"));
         }
+        let profile_role = match component.profile_role {
+            super::model::ProfileRole::Web => "web",
+            super::model::ProfileRole::Tui => "tui",
+            super::model::ProfileRole::Catalog => "catalog",
+        };
         if component.id.trim().is_empty()
             || component.display_name.trim().is_empty()
             || component.description.trim().is_empty()
             || component.package.trim().is_empty()
             || component.version.trim().is_empty()
             || component.source.trim().is_empty()
+            || !is_lower_hex(&component.commit, 40)
+            || !non_empty(&component.supported_dsh)
+            || component
+                .supported_dsh
+                .iter()
+                .any(|version| !valid_exact_version(version))
+            || component
+                .runtime_dependencies
+                .iter()
+                .any(|package| !valid_package_name(package))
             || component.license.trim().is_empty()
-            || !component.profiles.iter().any(|profile| profile == "web")
+            || !non_empty(&component.profiles)
+            || component
+                .profiles
+                .iter()
+                .any(|profile| !matches!(profile.as_str(), "web" | "tui" | "catalog"))
+            || !component
+                .profiles
+                .iter()
+                .any(|profile| profile == profile_role)
             || !non_empty(&component.bundle_entrypoints)
             || !component.artifact_sha256.starts_with("sha256:")
             || !is_lower_hex(&component.artifact_sha256[7..], 64)
@@ -221,4 +282,31 @@ pub fn resolve_enabled<'a>(
         }
     }
     Ok(enabled)
+}
+
+pub fn resolve_enabled_for_role<'a>(
+    lock: &'a WorkbenchLock,
+    desired: &BTreeMap<String, bool>,
+    mode: WorkbenchMode,
+    role: ProfileRole,
+) -> Result<Vec<&'a LockedComponent>, WorkbenchError> {
+    let scoped = WorkbenchLock {
+        schema_version: lock.schema_version,
+        generation: lock.generation.clone(),
+        components: lock
+            .components
+            .iter()
+            .filter(|component| component.profile_role == role)
+            .cloned()
+            .collect(),
+    };
+    let enabled_ids = resolve_enabled(&scoped, desired, mode)?
+        .into_iter()
+        .map(|component| component.id.as_str())
+        .collect::<BTreeSet<_>>();
+    Ok(lock
+        .components
+        .iter()
+        .filter(|component| enabled_ids.contains(component.id.as_str()))
+        .collect())
 }

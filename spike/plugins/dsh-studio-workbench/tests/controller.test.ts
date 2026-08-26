@@ -17,6 +17,7 @@ function catalog(enabled = true): WorkbenchCatalog {
         package: 'dsh-studio-skills-panel',
         version: '0.1.0',
         source: 'workspace:skills',
+        profileRole: 'web',
         license: 'MIT',
         permissions: ['workspace-read'],
         required: false,
@@ -34,6 +35,15 @@ function bridge(overrides: Partial<WorkbenchBridge> = {}): WorkbenchBridge {
     setEnabled: vi.fn().mockResolvedValue(catalog(false)),
     repair: vi.fn().mockResolvedValue(catalog()),
     startSafeMode: vi.fn().mockResolvedValue({ ...catalog(), mode: 'safe' }),
+    openTui: vi.fn().mockResolvedValue('/tmp/launch.command'),
+    prepareBrowser: vi.fn().mockResolvedValue('/tmp/browser/0.1.1'),
+    marketCatalog: vi.fn().mockResolvedValue({
+      total: 1,
+      matched: 1,
+      query: '',
+      categories: {},
+      plugins: [{ name: 'dsh-browser' }],
+    }),
     ...overrides,
   }
 }

@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "market": {
+    "repository": "https://github.com/dsh-market/dsh-market",
+    "commit": "3cbe62c9c706a85de8e5b980a3e51604a24d8157",
+    "package": "dshmarket",
+    "version": "1.31.1"
+  },
+  "catalog": {
+    "repository": "https://github.com/awesome-dsh-plugin/awesome-dsh-plugin",
+    "package": "dsh-plugin-catalog",
+    "version": "2026.826.2432",
+    "integrity": "sha512-PciyYOYNbZUWCCPmQXkuF3YD/0rEfgdAFXi6VmP8kGsAvh8bgf5Q6WiWEQMoBmNWvshzwcAJ3g3fVCflS2kYNw==",
+    "archiveSha256": "f2ce6c947789d7ac2dafe5aa1bc90c6b5f8c9833901319e2d952889559010932",
+    "snapshotSha256": "73b96d59c3115511151066888533936a5aa51372f61f59649e5906f5147b0f6e",
+    "entries": 2189
+  }
+}

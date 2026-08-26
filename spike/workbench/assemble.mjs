@@ -57,6 +57,8 @@ function validateComponent(component) {
     'package',
     'version',
     'source',
+    'commit',
+    'profileRole',
     'sourcePath',
     'license',
     'noticeSource',
@@ -71,7 +73,39 @@ function validateComponent(component) {
   if (!Array.isArray(component.include) || component.include.length === 0) {
     fail('invalid_component', component.id)
   }
-  if (!Array.isArray(component.profiles) || !component.profiles.includes('web')) {
+  if (
+    !Array.isArray(component.profiles) ||
+    component.profiles.length === 0 ||
+    component.profiles.some((profile) => !['web', 'tui', 'catalog'].includes(profile)) ||
+    !component.profiles.includes(component.profileRole)
+  ) {
+    fail('invalid_component', component.id)
+  }
+  if (!/^[0-9a-f]{40}$/u.test(component.commit)) {
+    fail('invalid_component', component.id)
+  }
+  if (
+    !Array.isArray(component.supportedDsh) ||
+    component.supportedDsh.length === 0 ||
+    component.supportedDsh.some(
+      (version) =>
+        typeof version !== 'string' ||
+        !/^\d+\.\d+\.\d+-[0-9A-Za-z.-]+$/u.test(version),
+    )
+  ) {
+    fail('invalid_component', component.id)
+  }
+  if (!['web', 'tui', 'catalog'].includes(component.profileRole)) {
+    fail('invalid_component', component.id)
+  }
+  if (
+    !Array.isArray(component.runtimeDependencies) ||
+    component.runtimeDependencies.some(
+      (name) =>
+        typeof name !== 'string' ||
+        !/^(?:@[a-z0-9._-]+\/)?[a-z0-9._-]+$/u.test(name),
+    )
+  ) {
     fail('invalid_component', component.id)
   }
   if (!Array.isArray(component.bundleEntrypoints) || component.bundleEntrypoints.length === 0) {
@@ -117,7 +151,8 @@ function runtimePaths(packageJson) {
         ? Object.values(exports)
         : []
   return [...exported, packageJson.dsh?.bundle?.patch].filter(
-    (value) => typeof value === 'string' && value.startsWith('./'),
+    (value) =>
+      typeof value === 'string' && value.startsWith('./') && !value.includes('*'),
   )
 }
 
@@ -192,6 +227,10 @@ export async function assemble({ sourceFile, outputDir }) {
       package: component.package,
       version: component.version,
       source: component.source,
+      commit: component.commit,
+      supportedDsh: component.supportedDsh,
+      profileRole: component.profileRole,
+      runtimeDependencies: component.runtimeDependencies,
       artifactPath,
       artifactSha256: await hashTree(targetPath),
       license: component.license,

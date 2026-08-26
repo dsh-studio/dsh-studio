@@ -157,6 +157,23 @@ impl StateStore {
         Ok(state)
     }
 
+    pub fn activate_component(
+        &self,
+        lock: &WorkbenchLock,
+        id: &str,
+        enabled: bool,
+    ) -> Result<ComponentState, WorkbenchError> {
+        if !lock.components.iter().any(|component| component.id == id) {
+            return Err(WorkbenchError::new("unknown_component", "工作台组件不存在"));
+        }
+        let mut state = self.load_or_initialize(lock)?;
+        state.desired.insert(id.to_string(), enabled);
+        state.active.insert(id.to_string(), enabled);
+        state.warning = None;
+        self.save(&state)?;
+        Ok(state)
+    }
+
     pub fn rollback_desired(&self, warning: &str) -> Result<ComponentState, WorkbenchError> {
         let mut state = self.load_existing()?;
         state.desired = state.active.clone();

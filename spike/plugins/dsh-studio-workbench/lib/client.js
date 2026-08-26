@@ -42,7 +42,13 @@ function createWorkbenchBridge() {
 			enabled
 		}),
 		repair: async () => desktopInvoke()("workbench_repair"),
-		startSafeMode: async () => desktopInvoke()("workbench_start_safe_mode")
+		startSafeMode: async () => desktopInvoke()("workbench_start_safe_mode"),
+		openTui: async () => desktopInvoke()("workbench_open_tui"),
+		prepareBrowser: async () => desktopInvoke()("workbench_prepare_browser"),
+		marketCatalog: async (query, limit = 50) => desktopInvoke()("workbench_market_catalog", {
+			query,
+			limit
+		})
 	};
 }
 
@@ -114,6 +120,15 @@ var WorkbenchController = class {
 	}
 	async startSafeMode() {
 		await this.runGlobal("safeMode", () => this.bridge.startSafeMode());
+	}
+	async openTui() {
+		return this.bridge.openTui();
+	}
+	async prepareBrowser() {
+		return this.bridge.prepareBrowser();
+	}
+	async marketCatalog(query, limit = 50) {
+		return this.bridge.marketCatalog(query, limit);
 	}
 	dispose() {
 		if (this.disposed) return;
@@ -196,12 +211,22 @@ function installWorkbenchStyles() {
 .dshstudio-workbench__chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .dshstudio-workbench__chip{padding:2px 7px;border-radius:999px;background:var(--dsw-alias-bg-layer-2);font-size:11px;color:var(--dsw-alias-label-secondary)}
 .dshstudio-workbench__status{font-size:12px;margin-top:6px}
+.dshstudio-workbench__inline-action{border:1px solid var(--dsw-alias-border-l1);border-radius:8px;padding:6px 10px;margin-top:10px;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);cursor:pointer}
+.dshstudio-workbench__inline-action:disabled{cursor:not-allowed;opacity:.55}
 .dshstudio-workbench__switch{min-width:54px;border:0;border-radius:999px;padding:6px 10px;cursor:pointer;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}
 .dshstudio-workbench__switch[aria-checked="true"]{background:var(--dsw-alias-brand-primary);color:white}
 .dshstudio-workbench__switch:disabled{cursor:not-allowed;opacity:.62}
 .dshstudio-workbench__actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
 .dshstudio-workbench__button{border:1px solid var(--dsw-alias-border-l1);border-radius:9px;padding:7px 12px;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);cursor:pointer}
 .dshstudio-workbench__button:disabled{cursor:wait;opacity:.65}
+.dshstudio-workbench__market{margin-top:16px;padding:14px;border:1px solid var(--dsw-alias-border-l1);border-radius:12px;background:var(--dsw-alias-bg-layer-1)}
+.dshstudio-workbench__market-head{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+.dshstudio-workbench__market-search{display:flex;gap:8px}
+.dshstudio-workbench__market-search input{min-width:220px;border:1px solid var(--dsw-alias-border-l1);border-radius:8px;padding:7px 9px;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}
+.dshstudio-workbench__market-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;margin-top:12px}
+.dshstudio-workbench__market-list article{padding:10px;border-radius:9px;background:var(--dsw-alias-bg-layer-2)}
+.dshstudio-workbench__market-list span{display:block;color:var(--dsw-alias-label-secondary);font-size:11px;margin-top:2px}
+.dshstudio-workbench__market-list p{color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px;margin:6px 0 0}
 `;
 	document.head.appendChild(style);
 	return () => style.remove();
@@ -214,8 +239,13 @@ const PERMISSION_LABELS = {
 	"workspace-write": "工作区写入",
 	terminal: "终端执行",
 	browser: "浏览器控制",
+	"browser-control": "浏览器控制",
 	network: "网络访问",
-	model: "模型调用"
+	model: "模型调用",
+	agent: "Agent 协作",
+	subagent: "子 Agent",
+	process: "本地进程",
+	"catalog-read": "目录只读"
 };
 const HEALTH_LABELS = {
 	active: "运行中",
@@ -227,8 +257,45 @@ const HEALTH_LABELS = {
 function WorkbenchSettingsSection({ controller }) {
 	const snapshot = (0, react.useSyncExternalStore)(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
 	const [confirmSafeMode, setConfirmSafeMode] = (0, react.useState)(false);
-	const busy = snapshot.pendingComponentId !== null || snapshot.pendingGlobalAction !== null;
+	const [pendingAction, setPendingAction] = (0, react.useState)(null);
+	const [actionError, setActionError] = (0, react.useState)(null);
+	const [actionNotice, setActionNotice] = (0, react.useState)(null);
+	const [marketQuery, setMarketQuery] = (0, react.useState)("");
+	const [marketPage, setMarketPage] = (0, react.useState)(null);
+	const busy = snapshot.pendingComponentId !== null || snapshot.pendingGlobalAction !== null || pendingAction !== null;
 	const catalog = snapshot.catalog;
+	async function runPathAction(action) {
+		if (busy) return;
+		setPendingAction(action);
+		setActionError(null);
+		setActionNotice(null);
+		try {
+			if (action === "tui") {
+				await controller.openTui();
+				setActionNotice("DSH TUI 已在独立终端中打开。");
+			} else {
+				await controller.prepareBrowser();
+				setActionNotice("Chrome 扩展已准备好；请在扩展页选择“加载已解压的扩展”。");
+			}
+		} catch (error) {
+			setActionError(error instanceof Error ? error.message : String(error));
+		} finally {
+			setPendingAction(null);
+		}
+	}
+	async function loadMarket(query) {
+		if (busy) return;
+		setPendingAction("market");
+		setActionError(null);
+		setActionNotice(null);
+		try {
+			setMarketPage(await controller.marketCatalog(query, 50));
+		} catch (error) {
+			setActionError(error instanceof Error ? error.message : String(error));
+		} finally {
+			setPendingAction(null);
+		}
+	}
 	return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
 		className: "dshstudio-workbench",
 		"aria-busy": busy,
@@ -262,6 +329,16 @@ function WorkbenchSettingsSection({ controller }) {
 				className: "dshstudio-workbench__error",
 				role: "alert",
 				children: snapshot.error
+			}) : null,
+			actionError !== null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				className: "dshstudio-workbench__error",
+				role: "alert",
+				children: actionError
+			}) : null,
+			actionNotice !== null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				className: "dshstudio-workbench__notice",
+				role: "status",
+				children: actionNotice
 			}) : null,
 			catalog === null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 				role: "status",
@@ -302,7 +379,26 @@ function WorkbenchSettingsSection({ controller }) {
 							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 								className: "dshstudio-workbench__status",
 								children: [HEALTH_LABELS[component.health], component.required ? " · 核心组件" : ""]
-							})
+							}),
+							component.id === "tui" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+								type: "button",
+								className: "dshstudio-workbench__inline-action",
+								disabled: busy || !component.effectiveEnabled,
+								onClick: () => void runPathAction("tui"),
+								children: pendingAction === "tui" ? "正在打开…" : "打开 TUI"
+							}) : component.id === "browser" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+								type: "button",
+								className: "dshstudio-workbench__inline-action",
+								disabled: busy || !component.effectiveEnabled,
+								onClick: () => void runPathAction("browser"),
+								children: pendingAction === "browser" ? "正在准备…" : "准备 Chrome 扩展"
+							}) : component.id === "market" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+								type: "button",
+								className: "dshstudio-workbench__inline-action",
+								disabled: busy || !component.effectiveEnabled,
+								onClick: () => void loadMarket(marketQuery),
+								children: pendingAction === "market" ? "正在读取…" : "浏览插件目录"
+							}) : null
 						] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 							type: "button",
 							role: "switch",
@@ -318,6 +414,46 @@ function WorkbenchSettingsSection({ controller }) {
 					}, component.id);
 				})
 			}),
+			marketPage !== null ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
+				className: "dshstudio-workbench__market",
+				"aria-label": "DSH Market 只读目录",
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					className: "dshstudio-workbench__market-head",
+					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: "DSH Market 只读目录" }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: "dshstudio-workbench__meta",
+						children: [
+							"共 ",
+							marketPage.total,
+							" 项，当前匹配 ",
+							marketPage.matched,
+							" 项"
+						]
+					})] }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: "dshstudio-workbench__market-search",
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+							"aria-label": "搜索插件目录",
+							value: marketQuery,
+							onChange: (event) => setMarketQuery(event.currentTarget.value),
+							onKeyDown: (event) => {
+								if (event.key === "Enter") loadMarket(marketQuery);
+							}
+						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+							type: "button",
+							className: "dshstudio-workbench__button",
+							disabled: busy,
+							onClick: () => void loadMarket(marketQuery),
+							children: "搜索"
+						})]
+					})]
+				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					className: "dshstudio-workbench__market-list",
+					children: marketPage.plugins.map((plugin) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("article", { children: [
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: plugin.name }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: plugin.owner ?? "unknown" }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: plugin.description?.zh ?? plugin.description?.en ?? "暂无简介" })
+					] }, `${plugin.owner ?? ""}/${plugin.name}`))
+				})]
+			}) : null,
 			/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: "dshstudio-workbench__actions",
 				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {

@@ -3,7 +3,30 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import { WorkbenchSettingsSection } from '../src/WorkbenchSettingsSection'
-import type { WorkbenchSnapshot } from '../src/types'
+import type { ComponentView, ProfileRole, WorkbenchSnapshot } from '../src/types'
+
+function ecosystemComponent(
+  id: string,
+  displayName: string,
+  enabled: boolean,
+  profileRole: ProfileRole = 'web',
+): ComponentView {
+  return {
+    id,
+    displayName,
+    description: `${displayName} description`,
+    package: `example/${id}`,
+    version: '1.0.0',
+    source: `npm:${id}`,
+    profileRole,
+    license: 'MIT',
+    permissions: [],
+    required: false,
+    enabled,
+    effectiveEnabled: enabled,
+    health: enabled ? 'active' : 'disabled',
+  }
+}
 
 function snapshot(overrides: Partial<WorkbenchSnapshot> = {}): WorkbenchSnapshot {
   return {
@@ -21,6 +44,7 @@ function snapshot(overrides: Partial<WorkbenchSnapshot> = {}): WorkbenchSnapshot
           package: 'dsh-studio-themes',
           version: '0.1.0',
           source: 'workspace:themes',
+          profileRole: 'web',
           license: 'MIT',
           permissions: [],
           required: true,
@@ -35,6 +59,7 @@ function snapshot(overrides: Partial<WorkbenchSnapshot> = {}): WorkbenchSnapshot
           package: 'dsh-studio-skills-panel',
           version: '0.1.0',
           source: 'workspace:skills',
+          profileRole: 'web',
           license: 'MIT',
           permissions: ['workspace-read'],
           required: false,
@@ -58,6 +83,21 @@ function controller(current = snapshot()) {
     setEnabled: vi.fn().mockResolvedValue(undefined),
     repair: vi.fn().mockResolvedValue(undefined),
     startSafeMode: vi.fn().mockResolvedValue(undefined),
+    openTui: vi.fn().mockResolvedValue('/tmp/launch.command'),
+    prepareBrowser: vi.fn().mockResolvedValue('/tmp/browser/0.1.1'),
+    marketCatalog: vi.fn().mockResolvedValue({
+      total: 1,
+      matched: 1,
+      query: '',
+      categories: {},
+      plugins: [
+        {
+          name: 'dsh-browser',
+          owner: 'Lum1104',
+          description: { zh: '浏览器控制' },
+        },
+      ],
+    }),
   }
 }
 
@@ -114,5 +154,86 @@ describe('WorkbenchSettingsSection', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent('desktop_only')
     expect(screen.getByText('中文技能面板')).toBeVisible()
+  })
+
+  it('renders all seven ecosystem components with the selected defaults', () => {
+    const current = snapshot()
+    current.catalog = {
+      ...current.catalog!,
+      components: [
+        ecosystemComponent('better-sidebar', 'Better Sidebar', true),
+        ecosystemComponent('at-file', '@ 文件引用', true),
+        ecosystemComponent('agent-teams', 'Agent Teams', true),
+        ecosystemComponent('modlens', 'ModLens', false),
+        ecosystemComponent('browser', 'DSH Browser', false),
+        ecosystemComponent('tui', 'DSH TUI', false, 'tui'),
+        ecosystemComponent('market', 'DSH Market（只读）', false, 'catalog'),
+      ],
+    }
+    render(<WorkbenchSettingsSection controller={controller(current)} />)
+
+    for (const name of ['Better Sidebar', '@ 文件引用', 'Agent Teams']) {
+      expect(screen.getByRole('switch', { name })).toHaveAttribute('aria-checked', 'true')
+    }
+    for (const name of ['ModLens', 'DSH Browser', 'DSH TUI', 'DSH Market（只读）']) {
+      expect(screen.getByRole('switch', { name })).toHaveAttribute('aria-checked', 'false')
+    }
+  })
+
+  it('prepares Browser, opens TUI, and renders the bounded read-only Market catalog', async () => {
+    const user = userEvent.setup()
+    const current = snapshot()
+    current.catalog = {
+      ...current.catalog!,
+      components: [
+        ...current.catalog!.components,
+        {
+          ...ecosystemComponent('browser', 'DSH Browser', true),
+          permissions: ['browser-control'],
+        },
+        {
+          id: 'tui',
+          displayName: 'DSH TUI',
+          description: '终端界面',
+          package: '@deepseek-harness-tui/dsh-tui',
+          version: '0.9.3',
+          source: 'npm:tui',
+          profileRole: 'tui',
+          license: 'MIT',
+          permissions: ['terminal'],
+          required: false,
+          enabled: true,
+          effectiveEnabled: true,
+          health: 'active',
+        },
+        {
+          id: 'market',
+          displayName: 'DSH Market（只读）',
+          description: '插件目录',
+          package: 'dshmarket',
+          version: '1.31.1',
+          source: 'npm:dshmarket',
+          profileRole: 'catalog',
+          license: 'MIT',
+          permissions: ['catalog-read'],
+          required: false,
+          enabled: true,
+          effectiveEnabled: true,
+          health: 'active',
+        },
+      ],
+    }
+    const face = controller(current)
+    render(<WorkbenchSettingsSection controller={face} />)
+
+    await user.click(screen.getByRole('button', { name: '准备 Chrome 扩展' }))
+    expect(face.prepareBrowser).toHaveBeenCalledOnce()
+    await user.click(screen.getByRole('button', { name: '打开 TUI' }))
+    expect(face.openTui).toHaveBeenCalledOnce()
+    await user.click(screen.getByRole('button', { name: '浏览插件目录' }))
+    expect(face.marketCatalog).toHaveBeenCalledWith('', 50)
+    expect(await screen.findByText('dsh-browser')).toBeVisible()
+    expect(screen.getByText('目录只读')).toBeVisible()
+    expect(screen.queryByRole('button', { name: /安装|更新|卸载/ })).not.toBeInTheDocument()
   })
 })

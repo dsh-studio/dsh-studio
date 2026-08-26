@@ -21,12 +21,22 @@ export function installWorkbenchStyles(): () => void {
 .dshstudio-workbench__chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .dshstudio-workbench__chip{padding:2px 7px;border-radius:999px;background:var(--dsw-alias-bg-layer-2);font-size:11px;color:var(--dsw-alias-label-secondary)}
 .dshstudio-workbench__status{font-size:12px;margin-top:6px}
+.dshstudio-workbench__inline-action{border:1px solid var(--dsw-alias-border-l1);border-radius:8px;padding:6px 10px;margin-top:10px;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);cursor:pointer}
+.dshstudio-workbench__inline-action:disabled{cursor:not-allowed;opacity:.55}
 .dshstudio-workbench__switch{min-width:54px;border:0;border-radius:999px;padding:6px 10px;cursor:pointer;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}
 .dshstudio-workbench__switch[aria-checked="true"]{background:var(--dsw-alias-brand-primary);color:white}
 .dshstudio-workbench__switch:disabled{cursor:not-allowed;opacity:.62}
 .dshstudio-workbench__actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
 .dshstudio-workbench__button{border:1px solid var(--dsw-alias-border-l1);border-radius:9px;padding:7px 12px;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);cursor:pointer}
 .dshstudio-workbench__button:disabled{cursor:wait;opacity:.65}
+.dshstudio-workbench__market{margin-top:16px;padding:14px;border:1px solid var(--dsw-alias-border-l1);border-radius:12px;background:var(--dsw-alias-bg-layer-1)}
+.dshstudio-workbench__market-head{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+.dshstudio-workbench__market-search{display:flex;gap:8px}
+.dshstudio-workbench__market-search input{min-width:220px;border:1px solid var(--dsw-alias-border-l1);border-radius:8px;padding:7px 9px;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}
+.dshstudio-workbench__market-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;margin-top:12px}
+.dshstudio-workbench__market-list article{padding:10px;border-radius:9px;background:var(--dsw-alias-bg-layer-2)}
+.dshstudio-workbench__market-list span{display:block;color:var(--dsw-alias-label-secondary);font-size:11px;margin-top:2px}
+.dshstudio-workbench__market-list p{color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px;margin:6px 0 0}
 `
   document.head.appendChild(style)
   return () => style.remove()

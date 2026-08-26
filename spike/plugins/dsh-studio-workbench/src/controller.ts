@@ -1,4 +1,5 @@
 import type {
+  MarketCatalogPage,
   WorkbenchBridge,
   WorkbenchCatalog,
   WorkbenchSnapshot,
@@ -70,6 +71,18 @@ export class WorkbenchController {
 
   async startSafeMode(): Promise<void> {
     await this.runGlobal('safeMode', () => this.bridge.startSafeMode())
+  }
+
+  async openTui(): Promise<string> {
+    return this.bridge.openTui()
+  }
+
+  async prepareBrowser(): Promise<string> {
+    return this.bridge.prepareBrowser()
+  }
+
+  async marketCatalog(query: string, limit = 50): Promise<MarketCatalogPage> {
+    return this.bridge.marketCatalog(query, limit)
   }
 
   dispose(): void {

@@ -4,8 +4,10 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-use super::artifact::resolve_enabled;
-use super::model::{CompositionTransaction, ManagedProfileRecord, WorkbenchLock, WorkbenchMode};
+use super::artifact::{hash_tree, resolve_enabled_for_role};
+use super::model::{
+    CompositionTransaction, ManagedProfileRecord, ProfileRole, WorkbenchLock, WorkbenchMode,
+};
 use super::WorkbenchError;
 
 const BASE_BUNDLE: &str = "@deepseek-ai/dsh-base";
@@ -24,6 +26,10 @@ pub struct ProfileComposer {
     home: PathBuf,
     assets: PathBuf,
     state_root: PathBuf,
+    runtime_package_roots: Vec<PathBuf>,
+    role: ProfileRole,
+    profile_name: String,
+    base_bundles: Vec<String>,
     #[cfg(test)]
     fail_link_for: Option<String>,
 }
@@ -34,9 +40,37 @@ impl ProfileComposer {
             home,
             assets,
             state_root,
+            runtime_package_roots: Vec::new(),
+            role: ProfileRole::Web,
+            profile_name: "web".into(),
+            base_bundles: vec![BASE_BUNDLE.into(), WEB_BUNDLE.into()],
             #[cfg(test)]
             fail_link_for: None,
         }
+    }
+
+    pub fn new_tui(home: PathBuf, assets: PathBuf, state_root: PathBuf) -> Self {
+        Self {
+            home,
+            assets,
+            state_root,
+            runtime_package_roots: Vec::new(),
+            role: ProfileRole::Tui,
+            profile_name: "dsh-tui".into(),
+            base_bundles: vec![BASE_BUNDLE.into()],
+            #[cfg(test)]
+            fail_link_for: None,
+        }
+    }
+
+    pub fn with_runtime_packages(mut self, runtime_packages: PathBuf) -> Self {
+        self.runtime_package_roots = vec![runtime_packages];
+        self
+    }
+
+    pub fn with_runtime_package_roots(mut self, runtime_package_roots: Vec<PathBuf>) -> Self {
+        self.runtime_package_roots = runtime_package_roots;
+        self
     }
 
     #[cfg(test)]
@@ -46,7 +80,11 @@ impl ProfileComposer {
     }
 
     fn profile(&self) -> PathBuf {
-        self.home.join("profiles/web")
+        self.home.join("profiles").join(&self.profile_name)
+    }
+
+    pub fn profile_path(&self) -> PathBuf {
+        self.profile()
     }
 
     fn package_path(&self) -> PathBuf {
@@ -83,7 +121,7 @@ impl ProfileComposer {
         desired: &BTreeMap<String, bool>,
         mode: WorkbenchMode,
     ) -> Result<CompositionTransaction, WorkbenchError> {
-        let enabled = resolve_enabled(lock, desired, mode)?;
+        let enabled = resolve_enabled_for_role(lock, desired, mode, self.role)?;
         std::fs::create_dir_all(self.node_modules()).map_err(|_| {
             WorkbenchError::new("profile_compose_failed", "无法创建 DSH Web Profile")
         })?;
@@ -94,7 +132,7 @@ impl ProfileComposer {
                 WorkbenchError::new("profile_unreadable", "DSH Web Profile 无法读取")
             })?
         } else {
-            default_manifest().to_string()
+            self.default_manifest()
         };
         let mut manifest: serde_json::Value = serde_json::from_str(&package_raw)
             .map_err(|_| WorkbenchError::new("profile_unreadable", "DSH Web Profile 无法解析"))?;
@@ -114,11 +152,13 @@ impl ProfileComposer {
         let current_packages = lock
             .components
             .iter()
+            .filter(|component| component.profile_role == self.role)
             .map(|component| component.package.clone())
             .collect::<BTreeSet<_>>();
         let current_bundles = lock
             .components
             .iter()
+            .filter(|component| component.profile_role == self.role)
             .flat_map(|component| component.bundle_entrypoints.iter().cloned())
             .collect::<BTreeSet<_>>();
         let owned_packages = previous
@@ -132,6 +172,35 @@ impl ProfileComposer {
             .iter()
             .cloned()
             .chain(current_bundles.iter().cloned())
+            .collect::<BTreeSet<_>>();
+        let requested_runtime_dependencies = enabled
+            .iter()
+            .flat_map(|component| component.runtime_dependencies.iter().cloned())
+            .collect::<BTreeSet<_>>();
+        let mut managed_runtime_dependencies = BTreeSet::new();
+        for package in &requested_runtime_dependencies {
+            validate_package_name(package)?;
+            let current = package_path(&self.node_modules(), package)?;
+            if previous.runtime_dependencies.contains(package)
+                || current.symlink_metadata().is_err()
+            {
+                let source = self.runtime_package_path(package)?;
+                verify_package_identity(&source, package)?;
+                managed_runtime_dependencies.insert(package.clone());
+            } else {
+                verify_package_identity(&current, package).map_err(|_| {
+                    WorkbenchError::new(
+                        "runtime_dependency_conflict",
+                        format!("运行依赖 {package} 已被用户文件占用"),
+                    )
+                })?;
+            }
+        }
+        let owned_paths = owned_packages
+            .iter()
+            .cloned()
+            .chain(previous.runtime_dependencies.iter().cloned())
+            .chain(managed_runtime_dependencies.iter().cloned())
             .collect::<BTreeSet<_>>();
 
         let dependencies = manifest
@@ -165,7 +234,15 @@ impl ProfileComposer {
             .as_object_mut()
             .ok_or_else(|| WorkbenchError::new("profile_unreadable", "dsh.profile 不是对象"))?
             .entry("bundles")
-            .or_insert_with(|| serde_json::json!([BASE_BUNDLE, WEB_BUNDLE]))
+            .or_insert_with(|| {
+                serde_json::Value::Array(
+                    self.base_bundles
+                        .iter()
+                        .cloned()
+                        .map(serde_json::Value::String)
+                        .collect(),
+                )
+            })
             .as_array_mut()
             .ok_or_else(|| WorkbenchError::new("profile_unreadable", "bundles 不是数组"))?;
         bundles.retain(|value| {
@@ -194,20 +271,25 @@ impl ProfileComposer {
                 .iter()
                 .flat_map(|component| component.bundle_entrypoints.iter().cloned())
                 .collect(),
+            runtime_dependencies: managed_runtime_dependencies.iter().cloned().collect(),
         };
         let package_bytes = pretty_json(&manifest)?;
         let managed_bytes = pretty_json(&next_managed)?;
 
         if profile_matches(&package_raw, &manifest)
             && previous == next_managed
-            && enabled.iter().all(|component| self.link_matches(component))
-            && owned_packages.iter().all(|package| {
+            && enabled
+                .iter()
+                .all(|component| self.installed_component_matches(component))
+            && managed_runtime_dependencies
+                .iter()
+                .all(|package| self.runtime_dependency_matches(package))
+            && owned_paths.iter().all(|package| {
                 next_managed.packages.contains(package)
+                    || next_managed.runtime_dependencies.contains(package)
                     || self
-                        .node_modules()
-                        .join(package)
-                        .symlink_metadata()
-                        .is_err()
+                        .package_install_path(package)
+                        .is_ok_and(|path| path.symlink_metadata().is_err())
             })
         {
             return Ok(CompositionTransaction {
@@ -245,15 +327,20 @@ impl ProfileComposer {
             transaction: transaction.clone(),
             had_package,
             had_managed,
-            affected_packages: owned_packages.iter().cloned().collect(),
+            affected_packages: owned_paths.iter().cloned().collect(),
         };
         atomic_write(
             &transaction_dir.join("transaction.json"),
             &pretty_json(&record)?,
         )?;
 
-        let apply_result =
-            self.apply_links(&transaction, &transaction_dir, &owned_packages, &enabled);
+        let apply_result = self.apply_links(
+            &transaction,
+            &transaction_dir,
+            &owned_paths,
+            &managed_runtime_dependencies,
+            &enabled,
+        );
         if apply_result.is_ok() {
             if let Err(error) = atomic_write(&self.package_path(), &package_bytes)
                 .and_then(|_| atomic_write(&self.managed_path(), &managed_bytes))
@@ -279,7 +366,8 @@ impl ProfileComposer {
         &self,
         transaction: &CompositionTransaction,
         transaction_dir: &Path,
-        owned_packages: &BTreeSet<String>,
+        owned_paths: &BTreeSet<String>,
+        runtime_dependencies: &BTreeSet<String>,
         enabled: &[&super::model::LockedComponent],
     ) -> Result<(), WorkbenchError> {
         let stage = self
@@ -288,18 +376,27 @@ impl ProfileComposer {
         std::fs::create_dir_all(&stage)
             .map_err(|_| WorkbenchError::new("profile_compose_failed", "无法准备组件链接"))?;
         for component in enabled {
-            create_link_or_copy(
-                &self.assets.join(&component.artifact_path),
-                &stage.join(&component.package),
-            )?;
+            let target = package_path(&stage, &component.package)?;
+            copy_directory(&self.assets.join(&component.artifact_path), &target)?;
         }
-        for package in owned_packages {
+        for package in runtime_dependencies {
+            let source = self.runtime_package_path(package)?;
+            let target = package_path(&stage, package)?;
+            create_runtime_link_or_copy(&source, &target)?;
+        }
+        for package in owned_paths {
             validate_package_name(package)?;
-            let current = self.node_modules().join(package);
+            let current = self.package_install_path(package)?;
             if current.symlink_metadata().is_ok() {
-                std::fs::rename(&current, transaction_dir.join("links").join(package)).map_err(
-                    |_| WorkbenchError::new("profile_compose_failed", "无法备份组件链接"),
-                )?;
+                let backup = package_path(&transaction_dir.join("links"), package)?;
+                if let Some(parent) = backup.parent() {
+                    std::fs::create_dir_all(parent).map_err(|_| {
+                        WorkbenchError::new("profile_compose_failed", "无法准备组件备份目录")
+                    })?;
+                }
+                std::fs::rename(&current, backup).map_err(|_| {
+                    WorkbenchError::new("profile_compose_failed", "无法备份组件链接")
+                })?;
             }
         }
         for component in enabled {
@@ -310,20 +407,64 @@ impl ProfileComposer {
                     "测试注入的组件链接失败",
                 ));
             }
-            std::fs::rename(
-                stage.join(&component.package),
-                self.node_modules().join(&component.package),
-            )
-            .map_err(|_| WorkbenchError::new("profile_compose_failed", "无法启用组件链接"))?;
+            let source = package_path(&stage, &component.package)?;
+            let destination = self.package_install_path(&component.package)?;
+            if let Some(parent) = destination.parent() {
+                std::fs::create_dir_all(parent).map_err(|_| {
+                    WorkbenchError::new("profile_compose_failed", "无法创建组件作用域目录")
+                })?;
+            }
+            std::fs::rename(source, destination)
+                .map_err(|_| WorkbenchError::new("profile_compose_failed", "无法启用组件链接"))?;
+        }
+        for package in runtime_dependencies {
+            let source = package_path(&stage, package)?;
+            let destination = self.package_install_path(package)?;
+            if let Some(parent) = destination.parent() {
+                std::fs::create_dir_all(parent).map_err(|_| {
+                    WorkbenchError::new("profile_compose_failed", "无法创建运行依赖作用域目录")
+                })?;
+            }
+            std::fs::rename(source, destination).map_err(|_| {
+                WorkbenchError::new("profile_compose_failed", "无法启用组件运行依赖")
+            })?;
         }
         let _ = std::fs::remove_dir_all(stage);
         Ok(())
     }
 
-    fn link_matches(&self, component: &super::model::LockedComponent) -> bool {
-        let link = self.node_modules().join(&component.package);
-        let target = self.assets.join(&component.artifact_path);
-        link_matches_target(&link, &target)
+    fn package_install_path(&self, package: &str) -> Result<PathBuf, WorkbenchError> {
+        package_path(&self.node_modules(), package)
+    }
+
+    fn runtime_package_path(&self, package: &str) -> Result<PathBuf, WorkbenchError> {
+        for root in &self.runtime_package_roots {
+            let candidate = package_path(root, package)?;
+            if candidate.join("package.json").is_file() {
+                return Ok(candidate);
+            }
+        }
+        Err(WorkbenchError::new(
+            "runtime_dependencies_missing",
+            format!("组件运行依赖 {package} 缺失"),
+        ))
+    }
+
+    fn installed_component_matches(&self, component: &super::model::LockedComponent) -> bool {
+        let Ok(installed) = self.package_install_path(&component.package) else {
+            return false;
+        };
+        hash_tree(&installed).ok().as_deref() == Some(component.artifact_sha256.as_str())
+    }
+
+    fn runtime_dependency_matches(&self, package: &str) -> bool {
+        let (Ok(installed), Ok(source)) = (
+            self.package_install_path(package),
+            self.runtime_package_path(package),
+        ) else {
+            return false;
+        };
+        runtime_link_matches(&installed, &source)
     }
 
     pub fn rollback(&self, transaction_id: &str) -> Result<(), WorkbenchError> {
@@ -334,18 +475,22 @@ impl ProfileComposer {
             .map_err(|_| WorkbenchError::new("rollback_unreadable", "组件回滚快照无法解析"))?;
         for package in &record.affected_packages {
             validate_package_name(package)?;
-            remove_path(&self.node_modules().join(package))?;
+            remove_path(&self.package_install_path(package)?)?;
         }
         let links = transaction_dir.join("links");
         if links.exists() {
-            for entry in std::fs::read_dir(&links)
-                .map_err(|_| WorkbenchError::new("rollback_failed", "无法读取组件链接快照"))?
-            {
-                let entry = entry
-                    .map_err(|_| WorkbenchError::new("rollback_failed", "无法读取组件链接快照"))?;
-                let package = entry.file_name().to_string_lossy().to_string();
-                validate_package_name(&package)?;
-                std::fs::rename(entry.path(), self.node_modules().join(package))
+            for package in &record.affected_packages {
+                let backup = package_path(&links, package)?;
+                if backup.symlink_metadata().is_err() {
+                    continue;
+                }
+                let destination = self.package_install_path(package)?;
+                if let Some(parent) = destination.parent() {
+                    std::fs::create_dir_all(parent).map_err(|_| {
+                        WorkbenchError::new("rollback_failed", "无法创建组件恢复目录")
+                    })?;
+                }
+                std::fs::rename(backup, destination)
                     .map_err(|_| WorkbenchError::new("rollback_failed", "无法恢复组件链接"))?;
             }
         }
@@ -370,18 +515,36 @@ impl ProfileComposer {
         }
         Ok(())
     }
+
+    fn default_manifest(&self) -> String {
+        serde_json::json!({
+            "name": format!("dsh-profile-{}", self.profile_name),
+            "private": true,
+            "dependencies": {},
+            "dsh": { "profile": { "bundles": self.base_bundles.clone() } }
+        })
+        .to_string()
+    }
 }
 
 fn validate_package_name(package: &str) -> Result<(), WorkbenchError> {
-    if package.is_empty()
-        || package == "."
-        || package == ".."
-        || package.contains('/')
-        || package.contains('\\')
-        || !package
-            .bytes()
-            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.'))
-    {
+    let valid_segment = |segment: &str| {
+        !segment.is_empty()
+            && segment.bytes().all(|byte| {
+                byte.is_ascii_lowercase()
+                    || byte.is_ascii_digit()
+                    || matches!(byte, b'-' | b'_' | b'.')
+            })
+    };
+    let valid = if let Some(scoped) = package.strip_prefix('@') {
+        let mut parts = scoped.split('/');
+        let scope = parts.next().unwrap_or_default();
+        let name = parts.next().unwrap_or_default();
+        parts.next().is_none() && valid_segment(scope) && valid_segment(name)
+    } else {
+        !package.contains('/') && valid_segment(package)
+    };
+    if !valid {
         return Err(WorkbenchError::new(
             "unsupported_package_name",
             "组件包名暂不支持",
@@ -390,14 +553,30 @@ fn validate_package_name(package: &str) -> Result<(), WorkbenchError> {
     Ok(())
 }
 
-fn default_manifest() -> &'static str {
-    r#"{
-  "name": "dsh-profile-web",
-  "private": true,
-  "dependencies": {},
-  "dsh": { "profile": { "bundles": ["@deepseek-ai/dsh-base", "@deepseek-ai/dsh-web-app"] } }
+fn package_path(root: &Path, package: &str) -> Result<PathBuf, WorkbenchError> {
+    validate_package_name(package)?;
+    if let Some(scoped) = package.strip_prefix('@') {
+        let (scope, name) = scoped
+            .split_once('/')
+            .ok_or_else(|| WorkbenchError::new("unsupported_package_name", "组件包名暂不支持"))?;
+        Ok(root.join(format!("@{scope}")).join(name))
+    } else {
+        Ok(root.join(package))
+    }
 }
-"#
+
+fn verify_package_identity(path: &Path, expected: &str) -> Result<(), WorkbenchError> {
+    let raw = std::fs::read_to_string(path.join("package.json"))
+        .map_err(|_| WorkbenchError::new("runtime_dependency_missing", "组件运行依赖缺失"))?;
+    let package: serde_json::Value = serde_json::from_str(&raw)
+        .map_err(|_| WorkbenchError::new("runtime_dependency_invalid", "组件运行依赖无法解析"))?;
+    if package.get("name").and_then(|value| value.as_str()) != Some(expected) {
+        return Err(WorkbenchError::new(
+            "runtime_dependency_mismatch",
+            "组件运行依赖身份不匹配",
+        ));
+    }
+    Ok(())
 }
 
 fn pretty_json(value: &impl Serialize) -> Result<Vec<u8>, WorkbenchError> {
@@ -491,17 +670,21 @@ fn remove_path(path: &Path) -> Result<(), WorkbenchError> {
 }
 
 #[cfg(unix)]
-fn create_link_or_copy(source: &Path, destination: &Path) -> Result<(), WorkbenchError> {
+fn create_runtime_link_or_copy(source: &Path, destination: &Path) -> Result<(), WorkbenchError> {
+    if let Some(parent) = destination.parent() {
+        std::fs::create_dir_all(parent).map_err(|_| {
+            WorkbenchError::new("profile_compose_failed", "无法创建运行依赖作用域目录")
+        })?;
+    }
     std::os::unix::fs::symlink(source, destination)
-        .map_err(|_| WorkbenchError::new("profile_compose_failed", "无法创建组件链接"))
+        .map_err(|_| WorkbenchError::new("profile_compose_failed", "无法创建运行依赖链接"))
 }
 
 #[cfg(windows)]
-fn create_link_or_copy(source: &Path, destination: &Path) -> Result<(), WorkbenchError> {
+fn create_runtime_link_or_copy(source: &Path, destination: &Path) -> Result<(), WorkbenchError> {
     copy_directory(source, destination)
 }
 
-#[cfg(windows)]
 fn copy_directory(source: &Path, destination: &Path) -> Result<(), WorkbenchError> {
     let metadata = std::fs::symlink_metadata(source)
         .map_err(|_| WorkbenchError::new("profile_compose_failed", "组件资源缺失"))?;
@@ -544,7 +727,7 @@ fn copy_directory(source: &Path, destination: &Path) -> Result<(), WorkbenchErro
 }
 
 #[cfg(unix)]
-fn link_matches_target(link: &Path, target: &Path) -> bool {
+fn runtime_link_matches(link: &Path, target: &Path) -> bool {
     let Ok(metadata) = std::fs::symlink_metadata(link) else {
         return false;
     };
@@ -558,6 +741,6 @@ fn link_matches_target(link: &Path, target: &Path) -> bool {
 }
 
 #[cfg(windows)]
-fn link_matches_target(link: &Path, target: &Path) -> bool {
+fn runtime_link_matches(link: &Path, target: &Path) -> bool {
     super::artifact::hash_tree(link).ok() == super::artifact::hash_tree(target).ok()
 }

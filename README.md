@@ -23,9 +23,11 @@ in a local sandbox — every step approvable and replayable.
 
 ## 最新进展 · Unreleased
 
-DSH Studio 现在拥有一套可恢复的本机组件工作台。品牌、模型供应商、Dream Skin 主题、中文技能面板和工作台管理器会在构建时离线锁定,并在本机启动时再次校验。
+DSH Studio 已把首批 DeepSeek Harness 生态能力装进同一个本机应用。除品牌、模型供应商、Dream Skin 主题、中文技能面板和组件管理外,现在还包含 Better Sidebar、`@` 文件引用、Agent Teams、ModLens、Browser、TUI 和只读 Market。
 
 - 在 **设置 → 工作台组件** 查看版本、来源、权限和运行状态
+- Better Sidebar、`dsh-at-file` 和 Agent Teams 默认启用;ModLens、Browser、TUI 和 Market 按需开启
+- Browser 可准备锁定的 Chrome 扩展,TUI 在独立终端运行,Market 只读取本地固定目录而不安装或卸载插件
 - 可修复组件或以安全模式重启;新组合启动失败会回滚,并最多自动尝试一次安全模式
 - 只管理 Studio 自带条目,不覆盖会话、主题、模型配置或用户自行安装的 dsh 插件
 
@@ -39,6 +41,7 @@ DSH Studio 把这段路砍掉,给不碰终端的中文用户一个能直接上�
 - **双击即用**:安装包内置裁剪版 Node 与 dsh runtime,零环境配置,首启只需填一个 API key
 - **原汁原味**:窗口里就是官方 dsh-web 深度体验(会话、审批、计划、轨迹),不是二次仿制;所有定制经官方插件机制注入,升级跟着上游走
 - **中文开箱**:内置中文技能——整理文件夹 / 调研报告 / 处理表格——新会话页点卡片即派活,设置里有技能管理面板
+- **生态工作台**:内置增强侧边栏、`@path` 引用和 Agent Teams;视觉、浏览器、TUI 与只读插件目录可按需开启
 - **一键换肤**:内置 Dream Skin 精选主题(壁纸级皮肤,附创作者署名),也能把自己的图片乃至动图做成专属皮肤,亮度、焦点、面板透明度随手调
 - **多模型接入**:DeepSeek 官方直连,预设硅基流动(注册送体验额度)与 OpenRouter;任何 OpenAI / Anthropic 兼容端点均可配置
 - **本机与隐私**:AI 在本机沙箱动手,数据不出本机;动文件前先出方案等确认,过程可回放
@@ -87,7 +90,19 @@ DSH Studio 把这段路砍掉,给不碰终端的中文用户一个能直接上�
 - 新组合只有在本地 host ready 后才生效;启动失败会回滚到上一组可用状态,并最多自动尝试一次安全模式
 - 组件修复与安全模式不会删除会话、模型配置、主题,也不会覆盖用户自行安装的 dsh 插件
 
-当前这一层先管理 DSH Studio 自带的品牌、供应商、主题、中文技能面板和工作台本身。Better Sidebar、Agent Teams、Browser、TUI 和 Market 等生态组件将在逐个完成兼容性审查后再接入,尚未包含在当前构建中。
+本次接入的生态组件:
+
+| 组件 | 默认 | 在 Studio 中的作用 |
+|---|---:|---|
+| Better Sidebar `0.16.1` | 开 | 文件浏览、编辑、终端与增强侧边栏;唯一的外部工作区 Shell |
+| `dsh-at-file` `0.4.0` | 开 | 在输入框搜索并插入 `@path` 工作区引用 |
+| Agent Teams `0.1.13` | 开 | 队长、成员、任务依赖、消息与团队活动面板 |
+| ModLens `3.25.0` | 关 | 为文本模型提供图片读取与视觉桥接 |
+| DSH Browser bridge `0.0.2` / 扩展 `0.1.1` | 关 | 准备锁定的 Chrome 扩展并通过本机桥接控制用户选定标签页 |
+| DSH TUI `0.9.3` | 关 | 在独立 Terminal 窗口运行隔离的 `dsh-tui` Profile |
+| DSH Market `1.31.1` | 关 | 搜索固定的官方插件目录快照;不开放安装、更新或卸载路由 |
+
+Dream Skin 仍是唯一主题引擎,不会与 Better Sidebar 争夺换肤。`dsh-web-ui` 与当前 Shell/UI 重复,暂不接入;`dsh-memory` 和 `dsh-hud` 因同名来源尚未选定,也继续暂缓。
 
 ## 生态仓库
 
@@ -100,17 +115,21 @@ DSH Studio 把这段路砍掉,给不碰终端的中文用户一个能直接上�
 
 ```bash
 # 1. 组装捆绑 runtime(mac;Windows 用 prepare-runtime-win.sh)
+#    Web/React 18 与 TUI/React 19 会安装到两棵隔离依赖树
 bash spike/prepare-runtime.sh
 
 # 2. 构建客户端插件
 cd spike/plugins && pnpm install && pnpm -r run bundle
 
-# 3. 开发运行
-cd ../app && pnpm install && pnpm tauri dev
+# 3. 锁定并组装工作台组件
+cd .. && node workbench/assemble.mjs
+
+# 4. 开发运行
+cd app && pnpm install && pnpm tauri dev
 ```
 
 架构一句话:**Tauri 壳 + 捆绑官方 dsh runtime + 可回滚的标准插件工作台**。壳启动本机 host(`dsh web`,仅监听 127.0.0.1),
-窗口加载官方 Web 界面;品牌、供应商预设、皮肤、技能面板和组件管理都是独立的 dsh 插件(`spike/plugins/`),由 `spike/workbench/` 离线组装,不 fork 上游一行代码。
+窗口加载官方 Web 界面;Studio 自有插件与经过固定提交/版本审查的生态插件由 `spike/workbench/` 离线组装,不 fork 官方 dsh。Web 和 TUI 使用隔离依赖树,避免 React 主版本互相覆盖。
 内置技能从 skills-zh 仓同步到 `spike/skills/`(手动 `cp`,改动技能请去上游仓提交)。
 
 ## License

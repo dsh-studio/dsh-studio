@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "@deepseek-harness-tui/dsh-tui": "0.9.3"
+  }
+}
