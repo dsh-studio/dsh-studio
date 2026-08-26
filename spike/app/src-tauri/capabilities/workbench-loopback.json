@@ -1,0 +1,10 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "workbench-loopback",
+  "description": "Workbench-only IPC for the DSH Web host on loopback.",
+  "local": false,
+  "windows": ["main"],
+  "remote": { "urls": ["http://127.0.0.1:*/*"] },
+  "permissions": ["allow-workbench-commands"],
+  "platforms": ["macOS", "windows"]
+}

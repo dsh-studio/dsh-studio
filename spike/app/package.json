@@ -4,8 +4,9 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "workbench:assemble": "node ../workbench/assemble.mjs",
+    "dev": "pnpm workbench:assemble && vite",
+    "build": "pnpm workbench:assemble && vite build",
     "preview": "vite preview",
     "tauri": "tauri"
   },

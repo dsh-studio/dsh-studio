@@ -1,0 +1,9 @@
+[[permission]]
+identifier = "allow-workbench-commands"
+description = "Allows the loopback UI to manage only the app-owned workbench composition."
+commands.allow = [
+  "workbench_catalog",
+  "workbench_set_enabled",
+  "workbench_repair",
+  "workbench_start_safe_mode",
+]

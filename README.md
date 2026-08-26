@@ -21,6 +21,16 @@ in a local sandbox — every step approvable and replayable.
 
 </div>
 
+## 最新进展 · Unreleased
+
+DSH Studio 现在拥有一套可恢复的本机组件工作台。品牌、模型供应商、Dream Skin 主题、中文技能面板和工作台管理器会在构建时离线锁定,并在本机启动时再次校验。
+
+- 在 **设置 → 工作台组件** 查看版本、来源、权限和运行状态
+- 可修复组件或以安全模式重启;新组合启动失败会回滚,并最多自动尝试一次安全模式
+- 只管理 Studio 自带条目,不覆盖会话、主题、模型配置或用户自行安装的 dsh 插件
+
+查看[工作台组件说明](#工作台组件) 和[完整更新记录](CHANGELOG.md)。
+
 ## 为什么是 DSH Studio
 
 [dsh](https://github.com/deepseek-ai/deepseek-harness) 很强,但官方形态是开发者工具:要装 Node、开终端、会配 profile。
@@ -69,6 +79,16 @@ DSH Studio 把这段路砍掉,给不碰终端的中文用户一个能直接上�
 
 皮肤是标准 dsh 插件实现,主题文件为开放的 JSON + 图片格式——欢迎社区投稿新主题。
 
+## 工作台组件
+
+设置 → 工作台组件可查看 Studio 自带组件的版本、来源、权限与运行状态。所有组件都在构建时离线组装并用 SHA-256 锁定;本机启动时再次校验。
+
+- 核心组件始终开启,可选组件关闭后只移除 Studio 管理的 Profile 条目
+- 新组合只有在本地 host ready 后才生效;启动失败会回滚到上一组可用状态,并最多自动尝试一次安全模式
+- 组件修复与安全模式不会删除会话、模型配置、主题,也不会覆盖用户自行安装的 dsh 插件
+
+当前这一层先管理 DSH Studio 自带的品牌、供应商、主题、中文技能面板和工作台本身。Better Sidebar、Agent Teams、Browser、TUI 和 Market 等生态组件将在逐个完成兼容性审查后再接入,尚未包含在当前构建中。
+
 ## 生态仓库
 
 | 仓库 | 用途 |
@@ -89,8 +109,8 @@ cd spike/plugins && pnpm install && pnpm -r run bundle
 cd ../app && pnpm install && pnpm tauri dev
 ```
 
-架构一句话:**Tauri 壳 + 捆绑官方 dsh runtime + 标准插件注入**。壳启动本机 host(`dsh web`,仅监听 127.0.0.1),
-窗口加载官方 Web 界面;品牌、供应商预设、皮肤、技能面板都是独立的 dsh 插件(`spike/plugins/`),不 fork 上游一行代码。
+架构一句话:**Tauri 壳 + 捆绑官方 dsh runtime + 可回滚的标准插件工作台**。壳启动本机 host(`dsh web`,仅监听 127.0.0.1),
+窗口加载官方 Web 界面;品牌、供应商预设、皮肤、技能面板和组件管理都是独立的 dsh 插件(`spike/plugins/`),由 `spike/workbench/` 离线组装,不 fork 上游一行代码。
 内置技能从 skills-zh 仓同步到 `spike/skills/`(手动 `cp`,改动技能请去上游仓提交)。
 
 ## License

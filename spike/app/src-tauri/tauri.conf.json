@@ -31,10 +31,7 @@
     "targets": ["app"],
     "resources": {
       "../../runtime/": "runtime/",
-      "../../plugins/dsh-studio-brand/": "plugins/dsh-studio-brand/",
-      "../../plugins/dsh-studio-providers/": "plugins/dsh-studio-providers/",
-      "../../plugins/dsh-studio-themes/": "plugins/dsh-studio-themes/",
-      "../../plugins/dsh-studio-skills-panel/": "plugins/dsh-studio-skills-panel/",
+      "../../workbench/dist/": "workbench/",
       "../../skills/": "skills/",
       "../../themes/": "themes/"
     },

@@ -5,13 +5,24 @@ use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager, State};
 
 pub mod theme;
+pub mod workbench;
 
 use theme::commands::{
     theme_activate, theme_catalog, theme_delete, theme_discard_stage, theme_import_image,
     theme_load, theme_save,
 };
+use workbench::commands::{
+    workbench_catalog, workbench_repair, workbench_set_enabled, workbench_start_safe_mode,
+};
+use workbench::model::{PreparedLaunch, WorkbenchMode};
+use workbench::service::{RecoveryAction, WorkbenchService};
 
-struct RunningChild(Mutex<Option<Child>>);
+struct RunningProcess {
+    launch_id: String,
+    child: Child,
+}
+
+struct RunningChild(Mutex<Option<RunningProcess>>);
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Default)]
 struct ModelConfig {
@@ -94,13 +105,24 @@ fn runtime_dir(app: &AppHandle) -> Result<PathBuf, String> {
     studio_asset_dir(app, "DSH_STUDIO_RUNTIME_DIR", "runtime", NODE_RELATIVE)
 }
 
-fn plugins_dir(app: &AppHandle) -> Result<PathBuf, String> {
-    studio_asset_dir(
-        app,
-        "DSH_STUDIO_PLUGINS_DIR",
-        "plugins",
-        "dsh-studio-brand/package.json",
-    )
+fn workbench_assets_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    if let Ok(path) = std::env::var("DSH_STUDIO_WORKBENCH_DIR") {
+        let path = PathBuf::from(path);
+        if path.join("workbench.lock.json").is_file() {
+            return Ok(path);
+        }
+    }
+    if let Ok(resources) = app.path().resource_dir() {
+        let path = resources.join("workbench");
+        if path.join("workbench.lock.json").is_file() {
+            return Ok(path);
+        }
+    }
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../workbench/dist");
+    if path.join("workbench.lock.json").is_file() {
+        return path.canonicalize().map_err(|error| error.to_string());
+    }
+    Err("workbench 资源缺失(找过 DSH_STUDIO_WORKBENCH_DIR、应用资源目录、源码树)".into())
 }
 
 fn skills_dir(app: &AppHandle) -> Result<PathBuf, String> {
@@ -140,85 +162,6 @@ fn theme_service(app: &AppHandle) -> Result<theme::ThemeService, String> {
         themes_root
     };
     theme::ThemeService::new(bundled_root, data_root).map_err(|error| error.to_string())
-}
-
-/// DSH Studio 自带的 profile 插件,顺序即 bundles 层顺序。
-const STUDIO_PLUGINS: [&str; 4] = [
-    "dsh-studio-brand",
-    "dsh-studio-providers",
-    "dsh-studio-themes",
-    "dsh-studio-skills-panel",
-];
-
-/// 把 DSH Studio 插件接进 web profile:package.json 声明 bundles,node_modules
-/// 放符号链接。等价于 `dsh plugin --profile web add`,但不依赖 pnpm。
-/// 清单做**合并**而不是"存在即跳过":应用升级新增的自带插件要能进到老清单里,
-/// 同时保留用户后装的条目;link 路径每次校准,升级换位后仍指向当前资源。
-fn provision_web_profile(home: &Path, plugins: &Path) -> Result<(), String> {
-    let profile = home.join("profiles/web");
-    let nm = profile.join("node_modules");
-    std::fs::create_dir_all(&nm).map_err(|e| e.to_string())?;
-    let pkg = profile.join("package.json");
-
-    let mut manifest: serde_json::Value = if pkg.exists() {
-        let raw = std::fs::read_to_string(&pkg).map_err(|e| e.to_string())?;
-        serde_json::from_str(&raw).map_err(|e| format!("profile package.json 解析失败: {e}"))?
-    } else {
-        serde_json::json!({
-            "name": "dsh-profile-web",
-            "private": true,
-            "dependencies": {},
-            "dsh": { "profile": { "bundles": ["@deepseek-ai/dsh-base", "@deepseek-ai/dsh-web-app"] } }
-        })
-    };
-
-    {
-        let root = manifest
-            .as_object_mut()
-            .ok_or("profile package.json 不是对象")?;
-        let deps = root
-            .entry("dependencies")
-            .or_insert_with(|| serde_json::json!({}))
-            .as_object_mut()
-            .ok_or("dependencies 不是对象")?;
-        for name in STUDIO_PLUGINS {
-            let link = format!("link:{}", plugins.join(name).display());
-            deps.insert(name.to_string(), serde_json::Value::String(link));
-        }
-    }
-    {
-        let root = manifest
-            .as_object_mut()
-            .ok_or("profile package.json 不是对象")?;
-        let bundles = root
-            .entry("dsh")
-            .or_insert_with(|| serde_json::json!({}))
-            .as_object_mut()
-            .ok_or("dsh 不是对象")?
-            .entry("profile")
-            .or_insert_with(|| serde_json::json!({}))
-            .as_object_mut()
-            .ok_or("dsh.profile 不是对象")?
-            .entry("bundles")
-            .or_insert_with(|| {
-                serde_json::json!(["@deepseek-ai/dsh-base", "@deepseek-ai/dsh-web-app"])
-            })
-            .as_array_mut()
-            .ok_or("bundles 不是数组")?;
-        for name in STUDIO_PLUGINS {
-            if !bundles.iter().any(|v| v.as_str() == Some(name)) {
-                bundles.push(serde_json::Value::String(name.to_string()));
-            }
-        }
-    }
-
-    let rendered = serde_json::to_string_pretty(&manifest).map_err(|e| e.to_string())?;
-    std::fs::write(&pkg, rendered + "\n").map_err(|e| e.to_string())?;
-
-    for name in STUDIO_PLUGINS {
-        replace_symlink(&plugins.join(name), &nm.join(name))?;
-    }
-    Ok(())
 }
 
 /// 把自带中文技能接进 DSH_HOME/skills(skill-filesystem 的发现目录)。
@@ -274,9 +217,26 @@ fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), String> {
     Ok(())
 }
 
-/// 启动 `dsh web`(loopback、OS 挑空闲端口),从 stdout 解析就绪 URL 后把主窗口
-/// 导航过去。stdout/stderr 同时转发成 `dsh-line` 事件给启动页显示。
-fn spawn_web_host(app: &AppHandle) -> Result<(), String> {
+fn stop_running_process(app: &AppHandle) -> Result<(), String> {
+    if let Some(mut running) = app.state::<RunningChild>().0.lock().unwrap().take() {
+        running.child.kill().map_err(|error| error.to_string())?;
+        let _ = running.child.wait();
+    }
+    Ok(())
+}
+
+fn clear_running_process(app: &AppHandle, launch_id: &str) {
+    let running_child = app.state::<RunningChild>();
+    let mut slot = running_child.0.lock().unwrap();
+    if slot.as_ref().map(|running| running.launch_id.as_str()) == Some(launch_id) {
+        if let Some(mut running) = slot.take() {
+            let _ = running.child.wait();
+        }
+    }
+}
+
+/// 启动受监督的 `dsh web`:只有 workbench 事务被标记 ready 后才导航。
+fn spawn_web_host(app: &AppHandle, launch: PreparedLaunch) -> Result<(), String> {
     let rt = runtime_dir(app)?;
     let node = rt.join(NODE_RELATIVE);
     let entry = rt.join("app/node_modules/@deepseek-ai/dsh/lib/bin.js");
@@ -294,7 +254,10 @@ fn spawn_web_host(app: &AppHandle) -> Result<(), String> {
     let mut child = command.spawn().map_err(|e| e.to_string())?;
     let stdout = child.stdout.take().ok_or("no stdout")?;
     let stderr = child.stderr.take().ok_or("no stderr")?;
-    *app.state::<RunningChild>().0.lock().unwrap() = Some(child);
+    *app.state::<RunningChild>().0.lock().unwrap() = Some(RunningProcess {
+        launch_id: launch.id.clone(),
+        child,
+    });
 
     let app_err = app.clone();
     std::thread::spawn(move || {
@@ -305,22 +268,57 @@ fn spawn_web_host(app: &AppHandle) -> Result<(), String> {
     });
 
     let app_out = app.clone();
+    let launch_id = launch.id.clone();
     std::thread::spawn(move || {
-        let mut navigated = false;
+        let mut ready = false;
         for line in BufReader::new(stdout).lines().map_while(Result::ok) {
             println!("[dsh] {line}");
             let _ = app_out.emit("dsh-line", line.clone());
-            if !navigated {
+            if !ready {
                 if let Some(url) = line.strip_prefix("dsh web: ") {
                     if let Ok(parsed) = tauri::Url::parse(url.trim()) {
-                        navigated = true;
-                        println!("[studio] host ready at {parsed}");
-                        ensure_navigated(&app_out, parsed);
+                        if parsed.host_str() == Some("127.0.0.1") {
+                            let marked = app_out.state::<WorkbenchService>().mark_ready(&launch_id);
+                            if marked.is_ok() {
+                                ready = true;
+                                println!("[studio] host ready at {parsed}");
+                                ensure_navigated(&app_out, parsed);
+                            } else if let Err(error) = marked {
+                                let _ = app_out.emit("dsh-line", format!("[fatal] {error}"));
+                            }
+                        } else {
+                            let _ = app_out.emit(
+                                "dsh-line",
+                                "[fatal] DSH Web 返回了非 loopback 地址".to_string(),
+                            );
+                        }
                     }
                 }
             }
         }
+        clear_running_process(&app_out, &launch_id);
         let _ = app_out.emit("dsh-line", "[exit]".to_string());
+        if !ready {
+            match app_out
+                .state::<WorkbenchService>()
+                .mark_failed(&launch_id, "host exited before ready")
+            {
+                Ok(RecoveryAction::LaunchSafeMode) => {
+                    if let Err(error) = restart_studio_mode(&app_out, WorkbenchMode::Safe) {
+                        let _ = app_out.emit("dsh-line", format!("[fatal] {error}"));
+                    }
+                }
+                Ok(RecoveryAction::Stop) => {
+                    let _ = app_out.emit(
+                        "dsh-line",
+                        "[fatal] 安全模式启动失败，已停止自动重试".to_string(),
+                    );
+                }
+                Err(error) => {
+                    let _ = app_out.emit("dsh-line", format!("[fatal] {error}"));
+                }
+            }
+        }
     });
     Ok(())
 }
@@ -349,12 +347,33 @@ fn ensure_navigated(app: &AppHandle, target: tauri::Url) {
     });
 }
 
-/// 应用启动序列:校准 profile 和技能 → 拉起 host。失败时留在启动页并显示原因。
+fn restart_studio_mode(app: &AppHandle, mode: WorkbenchMode) -> Result<(), String> {
+    stop_running_process(app)?;
+    let launch = app
+        .state::<WorkbenchService>()
+        .prepare_launch(mode)
+        .map_err(|error| error.to_string())?;
+    spawn_web_host(app, launch)
+}
+
+pub(crate) fn schedule_workbench_restart(
+    app: AppHandle,
+    mode: WorkbenchMode,
+) -> Result<(), workbench::WorkbenchError> {
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(150));
+        if let Err(error) = restart_studio_mode(&app, mode) {
+            let _ = app.emit("dsh-line", format!("[fatal] {error}"));
+        }
+    });
+    Ok(())
+}
+
+/// 应用启动序列:校准技能和事务化 Web profile → 拉起受监督 host。
 fn start_studio(app: &AppHandle) -> Result<(), String> {
     let home = dsh_home(app)?;
-    provision_web_profile(&home, &plugins_dir(app)?)?;
     provision_skills(&home, &skills_dir(app)?)?;
-    spawn_web_host(app)
+    restart_studio_mode(app, WorkbenchMode::Normal)
 }
 
 const HEADLESS_PROFILE_PKG: &str = r#"{
@@ -455,7 +474,8 @@ fn run_dsh(
     cwd: Option<String>,
 ) -> Result<(), String> {
     if let Some(mut old) = state.0.lock().unwrap().take() {
-        let _ = old.kill();
+        let _ = old.child.kill();
+        let _ = old.child.wait();
     }
     let rt = runtime_dir(&app)?;
     let node = rt.join(NODE_RELATIVE);
@@ -482,7 +502,11 @@ fn run_dsh(
     let mut child = command.spawn().map_err(|e| e.to_string())?;
     let stdout = child.stdout.take().ok_or("no stdout")?;
     let stderr = child.stderr.take().ok_or("no stderr")?;
-    *state.0.lock().unwrap() = Some(child);
+    let launch_id = uuid::Uuid::new_v4().to_string();
+    *state.0.lock().unwrap() = Some(RunningProcess {
+        launch_id: launch_id.clone(),
+        child,
+    });
     let app2 = app.clone();
     std::thread::spawn(move || {
         for line in BufReader::new(stderr).lines().map_while(Result::ok) {
@@ -495,9 +519,7 @@ fn run_dsh(
             let _ = app3.emit("dsh-line", line);
         }
         // stdout EOF:进程退出或被停止,清理句柄避免僵尸
-        if let Some(mut c) = app3.state::<RunningChild>().0.lock().unwrap().take() {
-            let _ = c.wait();
-        }
+        clear_running_process(&app3, &launch_id);
         let _ = app3.emit("dsh-line", "[exit]".to_string());
     });
     Ok(())
@@ -505,9 +527,9 @@ fn run_dsh(
 
 #[tauri::command]
 fn stop_dsh(state: State<RunningChild>) -> Result<(), String> {
-    if let Some(mut c) = state.0.lock().unwrap().take() {
-        c.kill().map_err(|e| e.to_string())?;
-        let _ = c.wait();
+    if let Some(mut running) = state.0.lock().unwrap().take() {
+        running.child.kill().map_err(|e| e.to_string())?;
+        let _ = running.child.wait();
     }
     Ok(())
 }
@@ -687,6 +709,20 @@ pub fn run() {
                 eprintln!("[studio] 主题恢复警告: {error}");
             }
             app.manage(themes);
+
+            let workbench_data = handle
+                .path()
+                .app_data_dir()
+                .map_err(|error| error.to_string())?
+                .join("workbench");
+            let workbench = WorkbenchService::new(
+                workbench_assets_dir(&handle)?,
+                dsh_home(&handle)?,
+                workbench_data,
+            )
+            .map_err(|error| error.to_string())?;
+            app.manage(workbench);
+
             if let Err(e) = start_studio(&handle) {
                 eprintln!("[studio] 启动失败: {e}");
                 let _ = handle.emit("dsh-line", format!("[fatal] {e}"));
@@ -707,16 +743,20 @@ pub fn run() {
             theme_save,
             theme_activate,
             theme_delete,
-            theme_discard_stage
+            theme_discard_stage,
+            workbench_catalog,
+            workbench_set_enabled,
+            workbench_repair,
+            workbench_start_safe_mode
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app, event| {
             // 退出时回收 host 子进程,避免孤儿 node 常驻
             if let tauri::RunEvent::Exit = event {
-                if let Some(mut c) = app.state::<RunningChild>().0.lock().unwrap().take() {
-                    let _ = c.kill();
-                    let _ = c.wait();
+                if let Some(mut running) = app.state::<RunningChild>().0.lock().unwrap().take() {
+                    let _ = running.child.kill();
+                    let _ = running.child.wait();
                 }
             }
         });
@@ -752,71 +792,6 @@ mod tests {
         // 已经空了再点一次不能报错
         assert_eq!(purge_sessions(&sessions).unwrap(), 0);
         let _ = std::fs::remove_dir_all(&home);
-    }
-
-    /// 升级路径:老清单(缺新插件)必须被合并补齐,且用户后装的条目原样保留。
-    #[test]
-    fn provision_merges_new_plugins_into_old_manifest() {
-        let base = std::env::temp_dir().join("dsh-studio-provision-test");
-        let _ = std::fs::remove_dir_all(&base);
-        let home = base.join("home");
-        let plugins = base.join("plugins");
-        for name in STUDIO_PLUGINS {
-            std::fs::create_dir_all(plugins.join(name)).unwrap();
-        }
-        let profile = home.join("profiles/web");
-        std::fs::create_dir_all(&profile).unwrap();
-        // 模拟两插件时代的老清单 + 一个用户自装插件
-        std::fs::write(
-            profile.join("package.json"),
-            r#"{
-  "name": "dsh-profile-web",
-  "private": true,
-  "dependencies": { "dsh-studio-brand": "link:/old/path", "user-extra": "link:/somewhere" },
-  "dsh": { "profile": { "bundles": ["@deepseek-ai/dsh-base", "@deepseek-ai/dsh-web-app", "dsh-studio-brand", "user-extra"] } }
-}"#,
-        )
-        .unwrap();
-
-        provision_web_profile(&home, &plugins).unwrap();
-
-        let raw = std::fs::read_to_string(profile.join("package.json")).unwrap();
-        let m: serde_json::Value = serde_json::from_str(&raw).unwrap();
-        let bundles: Vec<&str> = m["dsh"]["profile"]["bundles"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|v| v.as_str().unwrap())
-            .collect();
-        for name in STUDIO_PLUGINS {
-            assert!(bundles.contains(&name), "bundles 缺 {name}");
-            assert!(
-                m["dependencies"][name]
-                    .as_str()
-                    .unwrap()
-                    .starts_with("link:"),
-                "deps 缺 {name}"
-            );
-            assert!(
-                profile
-                    .join("node_modules")
-                    .join(name)
-                    .symlink_metadata()
-                    .is_ok(),
-                "符号链接缺 {name}"
-            );
-        }
-        assert!(bundles.contains(&"user-extra"), "用户自装插件被清掉了");
-        assert_eq!(
-            m["dependencies"]["user-extra"].as_str().unwrap(),
-            "link:/somewhere"
-        );
-        // link 路径被校准到当前资源目录,不再指向旧位置
-        assert!(m["dependencies"]["dsh-studio-brand"]
-            .as_str()
-            .unwrap()
-            .contains("dsh-studio-provision-test"));
-        let _ = std::fs::remove_dir_all(&base);
     }
 
     /// 没有 sessions 目录时统计返回全零而不是崩掉。
